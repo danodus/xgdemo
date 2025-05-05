@@ -1,0 +1,3 @@
+[submodule "hw/xgsoc"]
+	path = hw/xgsoc
+	url = https://github.com/danodus/xgsoc.git
