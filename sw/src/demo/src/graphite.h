@@ -40,11 +40,6 @@ typedef struct {
 } triangle_t;
 
 typedef struct {
-    size_t nb_vertices;
-    size_t nb_texcoords;
-    size_t nb_colors;
-    size_t nb_normals;
-    size_t nb_faces;
     std::vector<vec3d> vertices;
     std::vector<vec2d> texcoords;
     std::vector<vec3d> colors;

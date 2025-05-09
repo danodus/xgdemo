@@ -1,4 +1,8 @@
-IVERILOG = iverilog
+# Ref.: https://makefiletutorial.com/#makefile-cookbook
+
+BUILD_DIR := ./build
+SRC_DIRS := ./src
+
 PYTHON = python3
 
 RISCV_TOOLCHAIN_PATH =
@@ -10,43 +14,54 @@ OBJDUMP = ${RISCV_TOOLCHAIN_PATH}${RISCV_TOOLCHAIN_PREFIX}objdump
 CC = ${RISCV_TOOLCHAIN_PATH}${RISCV_TOOLCHAIN_PREFIX}gcc
 CXX = ${RISCV_TOOLCHAIN_PATH}${RISCV_TOOLCHAIN_PREFIX}g++
 
-FAT32_SOURCE = fat/fat_access.c fat/fat_cache.c fat/fat_filelib.c fat/fat_format.c fat/fat_misc.c fat/fat_string.c fat/fat_table.c fat/fat_write.c
-SRCS = start.S syscalls.c sd_card.c io.c $(FAT32_SOURCE) upng.c graphite.cpp program.cpp
-OBJS := $(SRCS:%=./%.o)
+SRCS = start.S $(shell find $(SRC_DIRS) -name '*.cpp' -or -name '*.c' -or -name '*.S')
+OBJS := $(SRCS:%=./$(BUILD_DIR)/%.o)
 DEPS := $(OBJS:.o=.d)
+
+# Every folder in ./src will need to be passed to GCC so that it can find header files
+INC_DIRS := $(shell find $(SRC_DIRS) -type d)
+# Add a prefix to INC_DIRS. So moduleA would become -ImoduleA. GCC understands this -I flag
+INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
 SERIAL ?= /dev/tty.usbserial-D00039
 
-all: program.hex
+all: $(BUILD_DIR)/program.hex
 
-run: program.hex
-	$(PYTHON) ../../../hw/xgsoc/utils/sendhex.py $(SERIAL) program.hex
+run: $(BUILD_DIR)/program.hex
+	$(PYTHON) ../../../hw/xgsoc/utils/sendhex.py $(SERIAL) $(BUILD_DIR)/program.hex
 
 program: program.hex
 
 clean:
-	rm -f *.hex *.elf *.bin *.lst fat/*.o *.o
+	rm -rf $(BUILD_DIR)
 
-program.lst: program.elf
-	${OBJDUMP} --disassemble program.elf > program.lst
+$(BUILD_DIR)/program.lst: $(BUILD_DIR)/program.elf
+	mkdir -p $(dir $@)
+	${OBJDUMP} --disassemble $< > $@
 
-program.hex: program.bin
-	$(PYTHON) ../../../hw/xgsoc/utils/makehex.py program.bin > program.hex
+$(BUILD_DIR)/program.hex: $(BUILD_DIR)/program.bin
+	mkdir -p $(dir $@)
+	$(PYTHON) ../../../hw/xgsoc/utils/makehex.py $< > $@
 
-program.bin: program.elf program.lst
-	${OBJCOPY} -O binary program.elf program.bin
+$(BUILD_DIR)/program.bin: $(BUILD_DIR)/program.elf $(BUILD_DIR)/program.lst
+	mkdir -p $(dir $@)
+	${OBJCOPY} -O binary $(BUILD_DIR)/program.elf $(BUILD_DIR)/program.bin
 
-%.S.o: %.S
+$(BUILD_DIR)/%.S.o: %.S
+	mkdir -p $(dir $@)
 	${CC} -march=rv32imaf_zicsr -mabi=ilp32f -MMD -MP -c $< -o $@
 
-%.c.o: %.c
-	${CC} -march=rv32imaf_zicsr -mabi=ilp32f -MMD -MP -O3 -Ifat -c $< -o $@
+$(BUILD_DIR)/%.c.o: %.c
+	mkdir -p $(dir $@)
+	${CC} -march=rv32imaf_zicsr -mabi=ilp32f -MMD -MP -O3 $(INC_FLAGS) -c $< -o $@
 
-%.cpp.o: %.cpp
-	${CXX} -march=rv32imaf_zicsr -mabi=ilp32f -std=c++17 -MMD -MP -O3 -Ifat -c $< -o $@
+$(BUILD_DIR)/%.cpp.o: %.cpp
+	mkdir -p $(dir $@)
+	${CXX} -march=rv32imaf_zicsr -mabi=ilp32f -std=c++17 -MMD -MP -O3 $(INC_FLAGS) -c $< -o $@
 
-program.elf: $(OBJS)
-	${CC} -march=rv32imaf_zicsr -mabi=ilp32f -O3 -nostartfiles -T program.ld $(OBJS) -o program.elf -lm -lstdc++
+$(BUILD_DIR)/program.elf: $(OBJS)
+	mkdir -p $(dir $@)
+	${CC} -march=rv32imaf_zicsr -mabi=ilp32f -O3 -nostartfiles -T program.ld $(OBJS) -o $@ -lm -lstdc++
 
 -include $(DEPS)
 

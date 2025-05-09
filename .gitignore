@@ -1,7 +1,2 @@
 .DS_Store
-*.d
-*.o
-*.elf
-*.hex
-*.lst
-*.bin
+sw/src/demo/build

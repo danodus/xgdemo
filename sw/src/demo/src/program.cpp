@@ -1,21 +1,10 @@
 #include "common.h"
 
-extern "C" {
-#include "io.h"
-#include "sd_card.h"
-#include "fat/fat_filelib.h"
-#include "upng.h"
-}
-
 #include <cstring>
 #include <cstdlib>
 #include <vector>
 
-
 #define BASE_VIDEO 0x1000000
-
-#define TEXTURE_WIDTH 32
-#define TEXTURE_HEIGHT 32
 
 #define OP_SET_X0 0
 #define OP_SET_Y0 1
@@ -465,7 +454,7 @@ bool load_texture(const char *path, int *texture_scale_x, int *texture_scale_y) 
     return true;
 }
 
-bool load_mesh_obj_data(mesh_t *mesh, const char *obj_filename) {
+static bool load_mesh_obj_data(mesh_t *mesh, const char *obj_filename) {
     FL_FILE* file;
     file = (FL_FILE *)fl_fopen(obj_filename, "r");
 
@@ -489,7 +478,6 @@ bool load_mesh_obj_data(mesh_t *mesh, const char *obj_filename) {
                 .w = 1.0f
             };
             mesh->vertices.emplace_back(v);
-            mesh->nb_vertices++;
         }
         // Vertex normal information
         if (strncmp(line, "vn ", 3) == 0) {
@@ -501,8 +489,7 @@ bool load_mesh_obj_data(mesh_t *mesh, const char *obj_filename) {
                 .z = z,
                 .w = 0.0f
             };
-            //mesh->normals.emplace_back(v);
-            //mesh->nb_normals++;
+            mesh->normals.emplace_back(v);
         }        
         // Texture coordinate information
         if (strncmp(line, "vt ", 3) == 0) {
@@ -514,7 +501,6 @@ bool load_mesh_obj_data(mesh_t *mesh, const char *obj_filename) {
                 .w = 1.0f
             };
             mesh->texcoords.emplace_back(t);
-            mesh->nb_texcoords++;
         }
         // Face information
         if (strncmp(line, "f ", 2) == 0) {
@@ -535,14 +521,12 @@ bool load_mesh_obj_data(mesh_t *mesh, const char *obj_filename) {
                 face.norm_indices[i] = normal_indices[i] - 1;
             }
             mesh->faces.emplace_back(face);
-            mesh->nb_faces++;
         }
     }
 
     fl_fclose(file);
     return true;
 }
-
 
 int main(void)
 {
@@ -570,7 +554,7 @@ int main(void)
     // camera
     mat4x4 mat_view   = matrix_make_identity();
 
-    model_t f22_model = {0};
+    model_t f22_model;
 
     if (!load_mesh_obj_data(&f22_model.mesh, "/assets/f22.obj")) {
         fl_shutdown();
@@ -585,7 +569,7 @@ int main(void)
 
     printf("texture scale x,y: %d, %d\r\n", texture_scale_x, texture_scale_y);
 
-    f22_model.triangles_to_raster = (triangle_t *)malloc(2 * f22_model.mesh.nb_faces * sizeof(triangle_t));
+    f22_model.triangles_to_raster = (triangle_t *)malloc(2 * f22_model.mesh.faces.size() * sizeof(triangle_t));
 
     model_t *model = &f22_model;
 

@@ -1,4 +1,4 @@
-all: hw
+all: hw sw
 
 hw:
 	make -C hw/xgsoc/rtl/ulx3s CONF=bvgkm VIDEO=qvga
@@ -20,8 +20,5 @@ run: hw sw
 clean:
 	make -C hw/xgsoc/rtl/ulx3s clean
 	make -C sw/src/demo clean
-
-clean:
-	make -C hw/xgsoc/rtl/ulx3s clean
 
 .PHONY: all hw sw prog run	

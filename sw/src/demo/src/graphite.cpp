@@ -443,7 +443,7 @@ void draw_model(int viewport_width, int viewport_height, vec3d* vec_camera, mode
     size_t triangle_to_raster_index = 0;
 
     // draw faces
-    for (size_t i = 0; i < model->mesh.nb_faces; ++i) {
+    for (size_t i = 0; i < model->mesh.faces.size(); ++i) {
         face_t* face = &model->mesh.faces[i];
         triangle_t tri;
         tri.p[0] = model->mesh.vertices[face->indices[0]];
@@ -524,7 +524,7 @@ void draw_model(int viewport_width, int viewport_height, vec3d* vec_camera, mode
                 vec3d light_direction = lights[light_index].direction;
                 float diffuse_intensity[3];
 
-                if ((model->mesh.nb_normals > 0) && (mat_normal != NULL)) {
+                if ((model->mesh.normals.size() > 0) && (mat_normal != NULL)) {
 
                     //
                     // Gouraud shading
