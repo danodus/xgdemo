@@ -42,3 +42,7 @@ git submodule update --recursive
 ```bash
 make prog run
 ```
+
+## Acknowledgments
+
+Code inspired by the raylib project Ergo available here: https://github.com/brihernandez/Ergo.

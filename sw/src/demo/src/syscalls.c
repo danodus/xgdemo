@@ -65,9 +65,6 @@ void unimplemented_syscall(const char *fn)
 
 void sysinit()
 {
-#ifdef XIO
-	xinit();
-#endif
 }
 
 void sys_set_tty_mode(unsigned int mode)
