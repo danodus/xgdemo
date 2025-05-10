@@ -1,9 +1,10 @@
 // graphite.c
-// Copyright (c) 2021-2024 Daniel Cliche
+// Copyright (c) 2021-2025 Daniel Cliche
 // SPDX-License-Identifier: MIT
 
-// Ref.: One Lone Coder's 3D Graphics Engine tutorial available on YouTube
-//       and https://www.scratchapixel.com/lessons/3d-basic-rendering/rasterization-practical-implementation
+// Ref.: - One Lone Coder's 3D Graphics Engine tutorial available on YouTube
+//       - https://www.scratchapixel.com/lessons/3d-basic-rendering/rasterization-practical-implementation
+//       - https://github.com/raysan5/raylib/blob/master/src/raymath.h
 
 #include "graphite.h"
 
@@ -12,12 +13,254 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "io.h"
+#include "fat/fat_filelib.h"
+#include "upng.h"
+
 #define MAX_NB_TRIANGLES    16      // maximum number of triangles produced by the clipping
 
-void xd_draw_triangle(vec3d p[3], vec2d t[3], vec3d c[3], texture_t* tex, bool clamp_s, bool clamp_t, int texture_scale_x, int texture_scale_y,
-                      bool depth_test, bool perspective_correct);
+#define BASE_VIDEO 0x1000000
 
-vec3d matrix_multiply_vector(mat4x4* m, vec3d* i) {
+#define OP_SET_X0 0
+#define OP_SET_Y0 1
+#define OP_SET_Z0 2
+#define OP_SET_X1 3
+#define OP_SET_Y1 4
+#define OP_SET_Z1 5
+#define OP_SET_X2 6
+#define OP_SET_Y2 7
+#define OP_SET_Z2 8
+#define OP_SET_R0 9
+#define OP_SET_G0 10
+#define OP_SET_B0 11
+#define OP_SET_R1 12
+#define OP_SET_G1 13
+#define OP_SET_B1 14
+#define OP_SET_R2 15
+#define OP_SET_G2 16
+#define OP_SET_B2 17
+#define OP_SET_S0 18
+#define OP_SET_T0 19
+#define OP_SET_S1 20
+#define OP_SET_T1 21
+#define OP_SET_S2 22
+#define OP_SET_T2 23
+#define OP_CLEAR 24
+#define OP_DRAW 25
+#define OP_SWAP 26
+#define OP_SET_TEX_ADDR 27
+#define OP_SET_FB_ADDR 28
+
+#define MEM_WRITE(_addr_, _value_) (*((volatile unsigned int *)(_addr_)) = _value_)
+#define MEM_READ(_addr_) *((volatile unsigned int *)(_addr_))
+
+#define PARAM(x) (_FLOAT_TO_FIXED(x, 14))
+
+struct Command {
+    uint32_t opcode : 8;
+    uint32_t param : 24;
+};
+
+static int g_fb_width, g_fb_height;
+static int g_tex_addr;
+
+
+static void send_command(struct Command *cmd) {
+    while (!MEM_READ(GRAPHITE));
+    MEM_WRITE(GRAPHITE, (cmd->opcode << 24) | cmd->param);
+}
+
+static void draw_triangle(vec3d p[3], vec2d t[3], vec3d c[3], const texture_t* texture, bool clamp_s, bool clamp_t, bool depth_test, bool perspective_correct)                      
+{
+    struct Command cmd;
+
+    cmd.opcode = OP_SET_X0;
+    cmd.param = PARAM(p[0].x) & 0xFFFF;
+    send_command(&cmd);
+    cmd.param = 0x10000 | (PARAM(p[0].x) >> 16);
+    send_command(&cmd);
+
+    cmd.opcode = OP_SET_Y0;
+    cmd.param = PARAM(p[0].y) & 0xFFFF;
+    send_command(&cmd);
+    cmd.param = 0x10000 | (PARAM(p[0].y) >> 16);
+    send_command(&cmd);
+
+    cmd.opcode = OP_SET_Z0;
+    cmd.param = PARAM(t[0].w) & 0xFFFF;
+    send_command(&cmd);
+    cmd.param = 0x10000 | (PARAM(t[0].w) >> 16);
+    send_command(&cmd);
+
+    cmd.opcode = OP_SET_X1;
+    cmd.param = PARAM(p[1].x) & 0xFFFF;
+    send_command(&cmd);
+    cmd.param = 0x10000 | (PARAM(p[1].x) >> 16);
+    send_command(&cmd);
+
+    cmd.opcode = OP_SET_Y1;
+    cmd.param = PARAM(p[1].y) & 0xFFFF;
+    send_command(&cmd);
+    cmd.param = 0x10000 | (PARAM(p[1].y) >> 16);
+    send_command(&cmd);
+
+    cmd.opcode = OP_SET_Z1;
+    cmd.param = PARAM(t[1].w) & 0xFFFF;
+    send_command(&cmd);
+    cmd.param = 0x10000 | (PARAM(t[1].w) >> 16);
+    send_command(&cmd);
+
+    cmd.opcode = OP_SET_X2;
+    cmd.param = PARAM(p[2].x) & 0xFFFF;
+    send_command(&cmd);
+    cmd.param = 0x10000 | (PARAM(p[2].x) >> 16);
+    send_command(&cmd);
+
+    cmd.opcode = OP_SET_Y2;
+    cmd.param = PARAM(p[2].y) & 0xFFFF;
+    send_command(&cmd);
+    cmd.param = 0x10000 | (PARAM(p[2].y) >> 16);
+    send_command(&cmd);
+
+    cmd.opcode = OP_SET_Z2;
+    cmd.param = PARAM(t[2].w) & 0xFFFF;
+    send_command(&cmd);
+    cmd.param = 0x10000 | (PARAM(p[2].z) >> 16);
+    send_command(&cmd);
+
+    cmd.opcode = OP_SET_S0;
+    cmd.param = PARAM(t[0].u) & 0xFFFF;
+    send_command(&cmd);
+    cmd.param = 0x10000 | (PARAM(t[0].u) >> 16);
+    send_command(&cmd);
+
+    cmd.opcode = OP_SET_T0;
+    cmd.param = PARAM(t[0].v) & 0xFFFF;
+    send_command(&cmd);
+    cmd.param = 0x10000 | (PARAM(t[0].v) >> 16);
+    send_command(&cmd);
+
+    cmd.opcode = OP_SET_S1;
+    cmd.param = PARAM(t[1].u) & 0xFFFF;
+    send_command(&cmd);
+    cmd.param = 0x10000 | (PARAM(t[1].u) >> 16);
+    send_command(&cmd);
+
+    cmd.opcode = OP_SET_T1;
+    cmd.param = PARAM(t[1].v) & 0xFFFF;
+    send_command(&cmd);
+    cmd.param = 0x10000 | (PARAM(t[1].v) >> 16);
+    send_command(&cmd);
+
+    cmd.opcode = OP_SET_S2;
+    cmd.param = PARAM(t[2].u) & 0xFFFF;
+    send_command(&cmd);
+    cmd.param = 0x10000 | (PARAM(t[2].u) >> 16);
+    send_command(&cmd);
+
+    cmd.opcode = OP_SET_T2;
+    cmd.param = PARAM(t[2].v) & 0xFFFF;
+    send_command(&cmd);
+    cmd.param = 0x10000 | (PARAM(t[2].v) >> 16);
+    send_command(&cmd);
+
+    cmd.opcode = OP_SET_R0;
+    cmd.param = PARAM(c[0].x) & 0xFFFF;
+    send_command(&cmd);
+    cmd.param = 0x10000 | (PARAM(c[0].x) >> 16);
+    send_command(&cmd);
+
+    cmd.opcode = OP_SET_G0;
+    cmd.param = PARAM(c[0].y) & 0xFFFF;
+    send_command(&cmd);
+    cmd.param = 0x10000 | (PARAM(c[0].y) >> 16);
+    send_command(&cmd);
+
+    cmd.opcode = OP_SET_B0;
+    cmd.param = PARAM(c[0].z) & 0xFFFF;
+    send_command(&cmd);
+    cmd.param = 0x10000 | (PARAM(c[0].z) >> 16);
+    send_command(&cmd);
+
+    cmd.opcode = OP_SET_R1;
+    cmd.param = PARAM(c[1].x) & 0xFFFF;
+    send_command(&cmd);
+    cmd.param = 0x10000 | (PARAM(c[1].x) >> 16);
+    send_command(&cmd);
+
+    cmd.opcode = OP_SET_G1;
+    cmd.param = PARAM(c[1].y) & 0xFFFF;
+    send_command(&cmd);
+    cmd.param = 0x10000 | (PARAM(c[1].y) >> 16);
+    send_command(&cmd);
+
+    cmd.opcode = OP_SET_B1;
+    cmd.param = PARAM(c[1].z) & 0xFFFF;
+    send_command(&cmd);
+    cmd.param = 0x10000 | (PARAM(c[1].z) >> 16);
+    send_command(&cmd);
+
+    cmd.opcode = OP_SET_R2;
+    cmd.param = PARAM(c[2].x) & 0xFFFF;
+    send_command(&cmd);
+    cmd.param = 0x10000 | (PARAM(c[2].x) >> 16);
+    send_command(&cmd);
+
+    cmd.opcode = OP_SET_G2;
+    cmd.param = PARAM(c[2].y) & 0xFFFF;
+    send_command(&cmd);
+    cmd.param = 0x10000 | (PARAM(c[2].y) >> 16);
+    send_command(&cmd);
+
+    cmd.opcode = OP_SET_B2;
+    cmd.param = PARAM(c[2].z) & 0xFFFF;
+    send_command(&cmd);
+    cmd.param = 0x10000 | (PARAM(c[2].z) >> 16);
+    send_command(&cmd);
+
+    if (texture != NULL) {
+        cmd.opcode = OP_SET_TEX_ADDR;
+        cmd.param = texture->addr & 0xFFFF;
+        send_command(&cmd);
+        cmd.param = 0x10000 | (texture->addr >> 16);
+        send_command(&cmd);
+    }
+
+    cmd.opcode = OP_DRAW;
+
+    cmd.param = (depth_test ? 0b01000 : 0b00000) | (clamp_s ? 0b00100 : 0b00000) | (clamp_t ? 0b00010 : 0b00000) |
+              ((texture != NULL) ? 0b00001 : 0b00000) | (perspective_correct ? 0b10000 : 0xb00000);
+
+    if (texture != NULL) {
+        cmd.param |= texture->scale_x << 5;
+        cmd.param |= texture->scale_y << 8;
+    }
+
+    send_command(&cmd);
+}
+
+void clear(unsigned int color) {
+    struct Command cmd;
+
+    // Clear framebuffer
+    cmd.opcode = OP_CLEAR;
+    cmd.param = color;
+    send_command(&cmd);
+    // Clear depth buffer
+    cmd.opcode = OP_CLEAR;
+    cmd.param = 0x010000;
+    send_command(&cmd);
+}
+
+void swap(void) {
+    struct Command cmd;
+
+    cmd.opcode = OP_SWAP;
+    cmd.param = 0x1;
+    send_command(&cmd);
+}
+
+vec3d matrix_multiply_vector(const mat4x4* m, const vec3d* i) {
     vec3d r = {i->x * m->m[0][0] + i->y * m->m[1][0] + i->z * m->m[2][0] + m->m[3][0],
                i->x * m->m[0][1] + i->y * m->m[1][1] + i->z * m->m[2][1] + m->m[3][1],
                i->x * m->m[0][2] + i->y * m->m[1][2] + i->z * m->m[2][2] + m->m[3][2],
@@ -26,31 +269,35 @@ vec3d matrix_multiply_vector(mat4x4* m, vec3d* i) {
     return r;
 }
 
-vec3d vector_add(vec3d* v1, vec3d* v2) {
+vec3d vector_add(const vec3d* v1, const vec3d* v2) {
     vec3d r = {v1->x + v2->x, v1->y + v2->y, v1->z + v2->z, 1.0f};
     return r;
 }
 
-vec3d vector_sub(vec3d* v1, vec3d* v2) {
+vec3d vector_sub(const vec3d* v1, const vec3d* v2) {
     vec3d r = {v1->x - v2->x, v1->y - v2->y, v1->z - v2->z, 1.0f};
     return r;
 }
 
-vec3d vector_mul(vec3d* v1, float k) {
+vec3d vector_mul(const vec3d* v1, float k) {
     vec3d r = {v1->x * k, v1->y * k, v1->z * k, 1.0f};
     return r;
 }
 
-vec3d vector_div(vec3d* v1, float k) {
+vec3d vector_div(const vec3d* v1, float k) {
     vec3d r = {v1->x / k, v1->y / k, v1->z / k, 1.0f};
     return r;
 }
 
-float vector_dot_product(vec3d* v1, vec3d* v2) { return v1->x * v2->x + v1->y * v2->y + v1->z * v2->z; }
+float vector_dot_product(const vec3d* v1, const vec3d* v2) {
+    return v1->x * v2->x + v1->y * v2->y + v1->z * v2->z;
+}
 
-float vector_length(vec3d* v) { return sqrtf(vector_dot_product(v, v)); }
+float vector_length(const vec3d* v) {
+    return sqrtf(vector_dot_product(v, v));
+}
 
-vec3d vector_normalize(vec3d* v) {
+vec3d vector_normalize(const vec3d* v) {
     float l = vector_length(v);
     if (l > 0.0f) {
         vec3d r = {v->x / l, v->y / l, v->z / l, 1.0f};
@@ -61,13 +308,13 @@ vec3d vector_normalize(vec3d* v) {
     }
 }
 
-vec3d vector_cross_product(vec3d* v1, vec3d* v2) {
+vec3d vector_cross_product(const vec3d* v1, const vec3d* v2) {
     vec3d r = {v1->y * v2->z - v1->z * v2->y, v1->z * v2->x - v1->x * v2->z,
                v1->x * v2->y - v1->y * v2->x, 1.0f};
     return r;
 }
 
-vec3d vector_clamp(vec3d* v) {
+vec3d vector_clamp(const vec3d* v) {
     vec3d r = *v;
     if (r.x > 1.0f)
         r.x = 1.0f;
@@ -78,7 +325,7 @@ vec3d vector_clamp(vec3d* v) {
     return r;
 }
 
-vec3d vector_intersect_plane(vec3d* plane_p, vec3d* plane_n, vec3d* line_start, vec3d* line_end, float* t) {
+static vec3d vector_intersect_plane(const vec3d* plane_p, const vec3d* plane_n, const vec3d* line_start, const vec3d* line_end, float* t) {
     float plane_d = -vector_dot_product(plane_n, plane_p);
     float ad = vector_dot_product(line_start, plane_n);
     float bd = vector_dot_product(line_end, plane_n);
@@ -89,12 +336,12 @@ vec3d vector_intersect_plane(vec3d* plane_p, vec3d* plane_n, vec3d* line_start, 
 }
 
 // return signed shortest distance from point to plane, plane normal must be normalized
-float dist_point_to_plane(vec3d* plane_p, vec3d* plane_n, vec3d* p) {
+static float dist_point_to_plane(const vec3d* plane_p, const vec3d* plane_n, const vec3d* p) {
     return (plane_n->x * p->x + plane_n->y * p->y + plane_n->z * p->z -
             vector_dot_product(plane_n, plane_p));
 }
 
-int triangle_clip_against_plane(vec3d plane_p, vec3d plane_n, triangle_t* in_tri, triangle_t* out_tri1,
+static int triangle_clip_against_plane(const vec3d* plane_p, const vec3d* plane_n, triangle_t* in_tri, triangle_t* out_tri1,
                                 triangle_t* out_tri2) {
     // create two temporary storage arrays to classify points either side of the plane
     // if distance sign is positive, point lies on the inside of plane
@@ -116,9 +363,9 @@ int triangle_clip_against_plane(vec3d plane_p, vec3d plane_n, triangle_t* in_tri
     int nb_outside_normals = 0;
 
     // get signed distance of each point in triangle to plane
-    float d0 = dist_point_to_plane(&plane_p, &plane_n, &in_tri->p[0]);
-    float d1 = dist_point_to_plane(&plane_p, &plane_n, &in_tri->p[1]);
-    float d2 = dist_point_to_plane(&plane_p, &plane_n, &in_tri->p[2]);
+    float d0 = dist_point_to_plane(plane_p, plane_n, &in_tri->p[0]);
+    float d1 = dist_point_to_plane(plane_p, plane_n, &in_tri->p[1]);
+    float d2 = dist_point_to_plane(plane_p, plane_n, &in_tri->p[2]);
 
     if (d0 >= 0.0f) {
         inside_points[nb_inside_points++] = &in_tri->p[0];
@@ -181,7 +428,7 @@ int triangle_clip_against_plane(vec3d plane_p, vec3d plane_n, triangle_t* in_tri
         // but the two new points are at the location where the original sides of the triangle (lines) intersect with
         // the plane
         float t;
-        out_tri1->p[1] = vector_intersect_plane(&plane_p, &plane_n, inside_points[0], outside_points[0], &t);
+        out_tri1->p[1] = vector_intersect_plane(plane_p, plane_n, inside_points[0], outside_points[0], &t);
         out_tri1->t[1].u = t * (outside_texcoords[0]->u - inside_texcoords[0]->u) + inside_texcoords[0]->u;
         out_tri1->t[1].v = t * (outside_texcoords[0]->v - inside_texcoords[0]->v) + inside_texcoords[0]->v;
         out_tri1->t[1].w = t * (outside_texcoords[0]->w - inside_texcoords[0]->w) + inside_texcoords[0]->w;
@@ -194,7 +441,7 @@ int triangle_clip_against_plane(vec3d plane_p, vec3d plane_n, triangle_t* in_tri
         out_tri1->n[1].z = t * (outside_normals[0]->z - inside_normals[0]->z) + inside_normals[0]->z;
         out_tri1->n[1].w = t * (outside_normals[0]->w - inside_normals[0]->w) + inside_normals[0]->w;
 
-        out_tri1->p[2] = vector_intersect_plane(&plane_p, &plane_n, inside_points[0], outside_points[1], &t);
+        out_tri1->p[2] = vector_intersect_plane(plane_p, plane_n, inside_points[0], outside_points[1], &t);
         out_tri1->t[2].u = t * (outside_texcoords[1]->u - inside_texcoords[0]->u) + inside_texcoords[0]->u;
         out_tri1->t[2].v = t * (outside_texcoords[1]->v - inside_texcoords[0]->v) + inside_texcoords[0]->v;
         out_tri1->t[2].w = t * (outside_texcoords[1]->w - inside_texcoords[0]->w) + inside_texcoords[0]->w;
@@ -224,7 +471,7 @@ int triangle_clip_against_plane(vec3d plane_p, vec3d plane_n, triangle_t* in_tri
         out_tri1->p[1] = *inside_points[1];
         out_tri1->t[1] = *inside_texcoords[1];
         out_tri1->c[1] = *inside_colors[1];
-        out_tri1->p[2] = vector_intersect_plane(&plane_p, &plane_n, inside_points[0], outside_points[0], &t);
+        out_tri1->p[2] = vector_intersect_plane(plane_p, plane_n, inside_points[0], outside_points[0], &t);
         out_tri1->t[2].u = t * (outside_texcoords[0]->u - inside_texcoords[0]->u) + inside_texcoords[0]->u;
         out_tri1->t[2].v = t * (outside_texcoords[0]->v - inside_texcoords[0]->v) + inside_texcoords[0]->v;
         out_tri1->t[2].w = t * (outside_texcoords[0]->w - inside_texcoords[0]->w) + inside_texcoords[0]->w;
@@ -242,7 +489,7 @@ int triangle_clip_against_plane(vec3d plane_p, vec3d plane_n, triangle_t* in_tri
         out_tri2->p[0] = *inside_points[1];
         out_tri2->t[0] = *inside_texcoords[1];
         out_tri2->c[0] = *inside_colors[1];
-        out_tri2->p[1] = vector_intersect_plane(&plane_p, &plane_n, inside_points[1], outside_points[0], &t);
+        out_tri2->p[1] = vector_intersect_plane(plane_p, plane_n, inside_points[1], outside_points[0], &t);
         out_tri2->t[1].u = t * (outside_texcoords[0]->u - inside_texcoords[1]->u) + inside_texcoords[1]->u;
         out_tri2->t[1].v = t * (outside_texcoords[0]->v - inside_texcoords[1]->v) + inside_texcoords[1]->v;
         out_tri2->t[1].w = t * (outside_texcoords[0]->w - inside_texcoords[1]->w) + inside_texcoords[1]->w;
@@ -265,7 +512,7 @@ int triangle_clip_against_plane(vec3d plane_p, vec3d plane_n, triangle_t* in_tri
     return 0;  // should not happen
 }
 
-mat4x4 matrix_make_identity() {
+mat4x4 matrix_make_identity(void) {
     mat4x4 mat;
     memset(&mat, 0, sizeof(mat4x4));
     mat.m[0][0] = 1.0f;
@@ -320,6 +567,7 @@ mat4x4 matrix_make_rotation_y(float theta) {
     mat_rot_y.m[1][1] = 1.0f;
     mat_rot_y.m[2][0] = sinf(theta);
     mat_rot_y.m[2][2] = cosf(theta);
+    mat_rot_y.m[3][3] = 1.0f;
 
     return mat_rot_y;
 }
@@ -431,25 +679,145 @@ mat4x4 matrix_quick_inverse(mat4x4* m) {
     return mat;
 }
 
+quaternion quaternion_make_identity(void) {
+    quaternion quat = { 0.0f, 0.0f, 0.0f, 1.0f };
+    return quat;
+}
+
+quaternion quaternion_from_euler(float pitch, float yaw, float roll) {
+    quaternion quat;
+
+    float x0 = cosf(pitch * 0.5f);
+    float x1 = sinf(pitch * 0.5f);
+    float y0 = cosf(yaw * 0.5f);
+    float y1 = sinf(yaw * 0.5f);
+    float z0 = cosf(roll * 0.5f);
+    float z1 = sinf(roll * 0.5f);
+
+    quat.x = x1 * y0 * z0 - x0 * y1 * z1;
+    quat.y = x0 * y1 * z0 + x1 * y0 * z1;
+    quat.z = x0 * y0 * z1 - x1 * y1 * z0;
+    quat.w = x0 * y0 * z0 + x1 * y1 * z1;
+
+    return quat;
+}
+
+mat4x4 quaternion_to_matrix(const quaternion* q) {
+    mat4x4 mat = matrix_make_identity();
+
+    float a2 = q->x * q->x;
+    float b2 = q->y * q->y;
+    float c2 = q->z * q->z;
+    float ac = q->x * q->z;
+    float ab = q->x * q->y;
+    float bc = q->y * q->z;
+    float ad = q->w * q->x;
+    float bd = q->w * q->y;
+    float cd = q->w * q->z;
+
+    mat.m[0][0] = 1 - 2 * (b2 + c2);
+    mat.m[0][1] = 2 * (ab + cd);
+    mat.m[0][2] = 2 * (ac - bd);
+
+    mat.m[1][0] = 2 * (ab - cd);
+    mat.m[1][1] = 1 - 2 * (a2 + c2);
+    mat.m[1][2] = 2 * (bc + ad);
+
+    mat.m[2][0] = 2 * (ac + bd);
+    mat.m[2][1] = 2 * (bc - ad);
+    mat.m[2][2] = 1 - 2 * (a2 + b2);
+
+    return mat;
+}
+
+quaternion quaternion_multiply(const quaternion* q1, const quaternion* q2) {
+    quaternion quat = {0};
+
+    float qax = q1->x, qay = q1->y, qaz = q1->z, qaw = q1->w;
+    float qbx = q2->x, qby = q2->y, qbz = q2->z, qbw = q2->w;
+
+    quat.x = qax * qbw + qaw * qbx + qay * qbz - qaz * qby;
+    quat.y = qay * qbw + qaw * qby + qaz * qbx - qax * qbz;
+    quat.z = qaz * qbw + qaw * qbz + qax * qby - qay * qbx;
+    quat.w = qaw * qbw - qax * qbx - qay * qby - qaz * qbz;
+
+    return quat;    
+}
+
+quaternion quaternion_from_axis_angle(vec3d axis, float angle)
+{
+    quaternion quat = {0.0f, 0.0f, 0.0f, 1.0f};
+
+    float axisLength = sqrtf(axis.x * axis.x + axis.y * axis.y + axis.z * axis.z);
+
+    if (axisLength != 0.0f)
+    {
+        angle *= 0.5f;
+
+        float length = 0.0f;
+        float ilength = 0.0f;
+
+        // Normalize
+        length = axisLength;
+        if (length == 0.0f) length = 1.0f;
+        ilength = 1.0f / length;
+        axis.x *= ilength;
+        axis.y *= ilength;
+        axis.z *= ilength;
+
+        float sinres = sinf(angle);
+        float cosres = cosf(angle);
+
+        quat.x = axis.x * sinres;
+        quat.y = axis.y * sinres;
+        quat.z = axis.z * sinres;
+        quat.w = cosres;
+
+        // Normalize
+        quaternion q = quat;
+        length = sqrtf(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
+        if (length == 0.0f) length = 1.0f;
+        ilength = 1.0f / length;
+        quat.x = q.x * ilength;
+        quat.y = q.y * ilength;
+        quat.z = q.z * ilength;
+        quat.w = q.w * ilength;
+    }
+
+    return quat;
+}
+
 static float clamp(float x) {
     if (x < 0.0f) return 0.0f;
     if (x > 1.0f) return 1.0f;
     return x;
 }
 
-void draw_model(int viewport_width, int viewport_height, vec3d* vec_camera, model_t* model, mat4x4* mat_world,
-                mat4x4* mat_normal, mat4x4* mat_proj, mat4x4* mat_view, light_t* lights, size_t nb_lights, texture_t* texture,
-                bool clamp_s, bool clamp_t, int texture_scale_x, int texture_scale_y, bool perspective_correct) {
+void graphite_init(void) {
+    unsigned int res = MEM_READ(CONFIG);
+    g_fb_width = res >> 16;
+    g_fb_height = res & 0xffff;
+    g_tex_addr = (0x1000000 >> 1) + 3 * g_fb_width * g_fb_height;
+}
+
+void get_fb_dimensions(int* fb_width, int*fb_height) {
+    *fb_width = g_fb_width;
+    *fb_height = g_fb_height;
+}
+
+void draw_model(int viewport_width, int viewport_height, const vec3d* vec_camera, const model_t* model, const mat4x4* mat_world,
+    const mat4x4* mat_normal, const mat4x4* mat_projection, const mat4x4* mat_view, const light_t* lights, size_t nb_lights, const texture_t* texture,
+    bool clamp_s, bool clamp_t, bool perspective_correct) {
     size_t triangle_to_raster_index = 0;
 
     // draw faces
-    for (size_t i = 0; i < model->mesh.faces.size(); ++i) {
+    for (size_t i = 0; i < model->mesh.nb_faces; ++i) {
         face_t* face = &model->mesh.faces[i];
         triangle_t tri;
         tri.p[0] = model->mesh.vertices[face->indices[0]];
         tri.p[1] = model->mesh.vertices[face->indices[1]];
         tri.p[2] = model->mesh.vertices[face->indices[2]];
-        if (model->mesh.texcoords.size() > 0) {
+        if (model->mesh.nb_texcoords > 0) {
             tri.t[0] = model->mesh.texcoords[face->tex_indices[0]];
             tri.t[1] = model->mesh.texcoords[face->tex_indices[1]];
             tri.t[2] = model->mesh.texcoords[face->tex_indices[2]];
@@ -458,7 +826,7 @@ void draw_model(int viewport_width, int viewport_height, vec3d* vec_camera, mode
             tri.t[1] = (vec2d){0.0f, 0.0f};
             tri.t[2] = (vec2d){0.0f, 0.0f};
         }
-        if (model->mesh.colors.size() > 0) {
+        if (model->mesh.nb_colors > 0) {
             tri.c[0] = model->mesh.colors[face->col_indices[0]];
             tri.c[1] = model->mesh.colors[face->col_indices[1]];
             tri.c[2] = model->mesh.colors[face->col_indices[2]];
@@ -467,7 +835,7 @@ void draw_model(int viewport_width, int viewport_height, vec3d* vec_camera, mode
             tri.c[1] = (vec3d){1.0f, 1.0f, 1.0f, 1.0f};
             tri.c[2] = (vec3d){1.0f, 1.0f, 1.0f, 1.0f};
         }
-        if (model->mesh.normals.size() > 0) {
+        if (model->mesh.nb_normals > 0) {
             tri.n[0] = model->mesh.normals[face->norm_indices[0]];
             tri.n[1] = model->mesh.normals[face->norm_indices[1]];
             tri.n[2] = model->mesh.normals[face->norm_indices[2]];
@@ -524,7 +892,7 @@ void draw_model(int viewport_width, int viewport_height, vec3d* vec_camera, mode
                 vec3d light_direction = lights[light_index].direction;
                 float diffuse_intensity[3];
 
-                if ((model->mesh.normals.size() > 0) && (mat_normal != NULL)) {
+                if ((model->mesh.nb_normals > 0) && (mat_normal != NULL)) {
 
                     //
                     // Gouraud shading
@@ -592,13 +960,13 @@ void draw_model(int viewport_width, int viewport_height, vec3d* vec_camera, mode
             const float z_near = 0.3f;
             vec3d plane_p = {0.0f, 0.0f, z_near, 1.0f};
             vec3d plane_n = {0.0f, 0.0f, 1.0f, 1.0f};
-            nb_clipped_triangles = triangle_clip_against_plane(plane_p, plane_n, &tri_viewed, &clipped[0], &clipped[1]);
+            nb_clipped_triangles = triangle_clip_against_plane(&plane_p, &plane_n, &tri_viewed, &clipped[0], &clipped[1]);
 
             for (int n = 0; n < nb_clipped_triangles; ++n) {
                 // project triangles from 3D to 2D
-                tri_projected.p[0] = matrix_multiply_vector(mat_proj, &clipped[n].p[0]);
-                tri_projected.p[1] = matrix_multiply_vector(mat_proj, &clipped[n].p[1]);
-                tri_projected.p[2] = matrix_multiply_vector(mat_proj, &clipped[n].p[2]);
+                tri_projected.p[0] = matrix_multiply_vector(mat_projection, &clipped[n].p[0]);
+                tri_projected.p[1] = matrix_multiply_vector(mat_projection, &clipped[n].p[1]);
+                tri_projected.p[2] = matrix_multiply_vector(mat_projection, &clipped[n].p[2]);
                 tri_projected.t[0] = clipped[n].t[0];
                 tri_projected.t[1] = clipped[n].t[1];
                 tri_projected.t[2] = clipped[n].t[2];
@@ -699,25 +1067,25 @@ void draw_model(int viewport_width, int viewport_height, vec3d* vec_camera, mode
                     case 0: {
                         vec3d p = {0.0f, 0.0f, 0.0f, 1.0f};
                         vec3d n = {0.0f, 1.0f, 0.0f, 1.0f};
-                        nb_tris_to_add = triangle_clip_against_plane(p, n, &test, &clipped[0], &clipped[1]);
+                        nb_tris_to_add = triangle_clip_against_plane(&p, &n, &test, &clipped[0], &clipped[1]);
                         break;
                     }
                     case 1: {
                         vec3d p = {0.0f, (float)(viewport_height - 1), 0.0f, 1.0f};
                         vec3d n = {0.0f, -1.0f, 0.0f, 1.0f};
-                        nb_tris_to_add = triangle_clip_against_plane(p, n, &test, &clipped[0], &clipped[1]);
+                        nb_tris_to_add = triangle_clip_against_plane(&p, &n, &test, &clipped[0], &clipped[1]);
                         break;
                     }
                     case 2: {
                         vec3d p = {0.0f, 0.0f, 0.0f, 1.0f};
                         vec3d n = {1.0f, 0.0f, 0.0f, 1.0f};
-                        nb_tris_to_add = triangle_clip_against_plane(p, n, &test, &clipped[0], &clipped[1]);
+                        nb_tris_to_add = triangle_clip_against_plane(&p, &n, &test, &clipped[0], &clipped[1]);
                         break;
                     }
                     case 3: {
                         vec3d p = {(float)(viewport_width - 1), 0.0f, 0.0f, 1.0f};
                         vec3d n = {-1.0f, 0.0f, 0.0f, 1.0f};
-                        nb_tris_to_add = triangle_clip_against_plane(p, n, &test, &clipped[0], &clipped[1]);
+                        nb_tris_to_add = triangle_clip_against_plane(&p, &n, &test, &clipped[0], &clipped[1]);
                         break;
                     }
                 }
@@ -756,7 +1124,138 @@ void draw_model(int viewport_width, int viewport_height, vec3d* vec_camera, mode
                 t->t[1] = tt;
                 t->c[1] = tc;
             }
-            xd_draw_triangle(t->p, t->t, t->c, texture, clamp_s, clamp_t, texture_scale_x, texture_scale_y, true, perspective_correct);
+            draw_triangle(t->p, t->t, t->c, texture, clamp_s, clamp_t, true, perspective_correct);
         }
     }
+}
+
+static bool load_mesh_obj_data(mesh_t *mesh, const char *obj_filename) {
+    FL_FILE* file;
+    file = fl_fopen(obj_filename, "r");
+
+    if (file == NULL)
+        return false;
+
+    memset(mesh, 0, sizeof(mesh_t));
+
+    char line[1024];
+    while (fl_fgets(line, 1024, file)) {
+        // Vertex information
+        if (strncmp(line, "v ", 2) == 0) {
+            float x, y, z;
+            sscanf(line, "v %f %f %f", &x, &y, &z);
+            vec3d v = {
+                .x = x,
+                .y = y,
+                .z = z,
+                .w = 1.0f
+            };
+            array_push(mesh->vertices, v);
+            mesh->nb_vertices++;
+        }
+        // Vertex normal information
+        if (strncmp(line, "vn ", 3) == 0) {
+            float x, y, z;
+            sscanf(line, "vn %f %f %f", &x, &y, &z);
+            vec3d v = {
+                .x = x,
+                .y = y,
+                .z = z,
+                .w = 0.0f
+            };
+            array_push(mesh->normals, v);
+            mesh->nb_normals++;
+        }        
+        // Texture coordinate information
+        if (strncmp(line, "vt ", 3) == 0) {
+            float u, v;
+            sscanf(line, "vt %f %f", &u, &v);
+            vec2d t = {
+                .u = u,
+                .v = 1.0f - v,
+                .w = 1.0f
+            };
+            array_push(mesh->texcoords, t);
+            mesh->nb_texcoords++;
+        }
+        // Face information
+        if (strncmp(line, "f ", 2) == 0) {
+            int vertex_indices[3];
+            int texture_indices[3];
+            int normal_indices[3];
+            sscanf(line,
+                "f %d/%d/%d %d/%d/%d %d/%d/%d",
+                &vertex_indices[0], &texture_indices[0], &normal_indices[0],
+                &vertex_indices[1], &texture_indices[1], &normal_indices[1],
+                &vertex_indices[2], &texture_indices[2], &normal_indices[2]
+            );
+            face_t face = {0};
+            for (int i = 0; i < 3; i++) {
+                face.indices[i] = vertex_indices[i] - 1;
+                face.col_indices[i] = 0;
+                face.tex_indices[i] = texture_indices[i] - 1;
+                face.norm_indices[i] = normal_indices[i] - 1;
+            }
+            array_push(mesh->faces, face);
+            mesh->nb_faces++;
+        }
+    }
+
+    fl_fclose(file);
+    return true;
+}
+
+bool load_model(model_t *model, const char *obj_filename) {
+    if (!load_mesh_obj_data(&model->mesh, obj_filename))
+        return false;
+    model->triangles_to_raster = (triangle_t *)malloc(2 * model->mesh.nb_faces * sizeof(triangle_t));
+    return true;
+}
+
+bool load_texture(texture_t *texture, const char *path) {
+    upng_t* png_image = upng_new_from_file(path);
+    if (png_image != NULL) {
+        upng_decode(png_image);
+        if (upng_get_error(png_image) != UPNG_EOK) {
+            return false;
+        }
+    }
+
+    texture->addr = g_tex_addr;
+
+    int texture_width = upng_get_width(png_image);
+    int texture_height = upng_get_height(png_image);
+
+    int t;
+
+    texture->scale_x = -5;
+    t = texture_width;
+    while (t >>= 1)
+        texture->scale_x++;
+
+    texture->scale_y = -5;
+    t = texture_height;
+    while (t >>= 1) 
+        texture->scale_y++;
+
+    if (texture->scale_x < 0 || texture->scale_y < 0)
+        return false;
+
+    uint32_t* texture_buffer = (uint32_t *)upng_get_buffer(png_image);
+
+    uint16_t* vram = 0;
+    for (int t = 0; t < texture_height; ++t)
+        for (int s = 0; s < texture_width; ++s) {
+
+            uint8_t* tc = (uint8_t*)(&texture_buffer[(texture_width * t) + s]);
+            uint16_t cr = tc[0] >> 4;
+            uint16_t cg = tc[1] >> 4;
+            uint16_t cb = tc[2] >> 4;
+            uint16_t ca = tc[3] >> 4;
+            vram[g_tex_addr++] = (ca << 12) | (cr << 8) | (cg << 4) | cb;
+        }
+
+    upng_free(png_image);
+
+    return true;
 }

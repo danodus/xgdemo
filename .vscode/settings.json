@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "*.s": "riscv",
+        "io.h": "c"
+    }
+}
