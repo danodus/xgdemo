@@ -224,8 +224,6 @@ int main(void)
 
     clear(0x31A6);
 
-    uint32_t counter = 0;
-
     bool key_up = false;
     bool key_down = false;
     bool key_left = false;
@@ -236,25 +234,24 @@ int main(void)
     bool key_d = false;
 
     float delta_time = 0.0f;
+    int frame_counter = 0;
 
     while(!quit) {
 
-        MEM_WRITE(LED, counter >> 2);
-        counter++;
+        MEM_WRITE(LED, frame_counter >> 2);
 
         plane->update(delta_time);
+        camera.follow_plane(*(std::dynamic_pointer_cast<Plane>(plane).get()));
 
         uint32_t t1_draw = MEM_READ(TIMER);
 
         clear(0x31A6);
 
-        camera.begin_drawing(0.0f, 0.0f);
+        camera.begin_drawing();
         scene.draw(&camera, lights, nb_lights);
         camera.end_drawing();
 
         swap();
-
-        vec3d vec_forward = vector_mul(&camera.m_vec_look_dir, 0.1f);
 
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
@@ -322,24 +319,35 @@ int main(void)
         }
 
         if (key_w)
-            plane->m_input_forward += 0.1f;
+            plane->m_input_forward += 0.2f;
         if (key_s)
-            plane->m_input_forward -= 0.1f;
+            if (plane->m_input_forward > 0.0f)
+                plane->m_input_forward -= 0.2f;
         if (key_left)
-            plane->m_input_roll += 0.1f;
-        if (key_right)
-            plane->m_input_roll -= 0.1f;
+            plane->m_input_roll = 0.5f;
+        else if (key_right)
+            plane->m_input_roll = -0.5f;
+        else
+            plane->m_input_roll = 0.0f;
         if (key_up)
-            plane->m_input_pitch += 0.1f;
-        if (key_down)
-            plane->m_input_pitch -= 0.1f;
+            plane->m_input_pitch = 0.3f;
+        else if (key_down)
+            plane->m_input_pitch = -0.3f;
+        else
+            plane->m_input_pitch = 0.0f;
         if (key_a)
-            plane->m_input_yaw -= 0.1f;
-        if (key_d)
-            plane->m_input_yaw += 0.1f;
+            plane->m_input_yaw = -0.5f;
+        else if (key_d)
+            plane->m_input_yaw = 0.5;
+        else
+            plane->m_input_yaw = 0.0f;
 
         uint32_t t2_draw = MEM_READ(TIMER);
         delta_time = (t2_draw - t1_draw) / 1000.0f;
+
+        frame_counter++;
+        if ((frame_counter % 5) == 0)
+            printf("FPS: %.1f\n", 1.0f / delta_time);
     }
 
     fl_shutdown();    

@@ -34,3 +34,10 @@ void Plane::update(float delta_time) {
     m_transform = transform;
     m_transform_normal = quaternion_to_matrix(&m_rotation);  
 }
+
+vec3d Plane::transform_point(vec3d point) const {
+    auto pos_mat = matrix_make_translation(m_position.x, m_position.y, m_position.z);
+    auto rot_mat = quaternion_to_matrix(&m_rotation);
+    auto mat = matrix_multiply_matrix(&rot_mat, &pos_mat);
+    return matrix_multiply_vector(&mat, &point);
+}
