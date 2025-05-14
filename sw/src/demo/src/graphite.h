@@ -103,6 +103,7 @@ quaternion quaternion_from_euler(float pitch, float yaw, float roll);
 mat4x4 quaternion_to_matrix(const quaternion* q);
 quaternion quaternion_multiply(const quaternion* q1, const quaternion* q2);
 quaternion quaternion_from_axis_angle(vec3d axis, float angle);
+vec3d vector_rotate_by_quaternion(const vec3d* v, const quaternion* q);
 
 void graphite_init(void);
 void get_fb_dimensions(int* fb_width, int* fb_height);

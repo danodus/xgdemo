@@ -787,6 +787,16 @@ quaternion quaternion_from_axis_angle(vec3d axis, float angle)
     return quat;
 }
 
+vec3d vector_rotate_by_quaternion(const vec3d* v, const quaternion* q) {
+    vec3d vec = {0};
+
+    vec.x = v->x * (q->x * q->x + q->w * q->w - q->y * q->y - q->z * q->z) + v->y * (2 * q->x * q->y - 2 * q->w * q->z) + v->z * (2 * q->x * q->z + 2 * q->w * q->y);
+    vec.y = v->x * (2 * q->w * q->z + 2 * q->x * q->y) + v->y * (q->w * q->w - q->x * q->x + q->y * q->y - q->z * q->z) + v->z * (-2 * q->w * q->x + 2 * q->y * q->z);
+    vec.z = v->x * (-2 * q->w * q->y + 2 * q->x * q->z) + v->y * (2 * q->w * q->x + 2 * q->y * q->z)+ v->z * (q->w * q->w - q->x * q->x - q->y * q->y + q->z * q->z);
+
+    return vec;
+}
+
 static float clamp(float x) {
     if (x < 0.0f) return 0.0f;
     if (x > 1.0f) return 1.0f;

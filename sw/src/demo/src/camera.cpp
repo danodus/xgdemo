@@ -5,7 +5,7 @@ Camera::Camera(float fov)
     int fb_width, fb_height;
     get_fb_dimensions(&fb_width, &fb_height);
     m_mat_proj = matrix_make_projection(fb_width, fb_height, fov);
-    m_vec_camera = {0.0f, 0.0f, 0.0f, 1.0f};
+    m_vec_camera = {0.0f, 5.0f, -30.0f, 1.0f};
 }
 
 void Camera::begin_drawing(float pitch, float yaw)

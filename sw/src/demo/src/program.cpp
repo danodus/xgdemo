@@ -1,7 +1,7 @@
 #include "common.h"
 
 #include "camera.h"
-#include "entity.h"
+#include "plane.h"
 #include "scene.h"
 
 #include <cstring>
@@ -188,27 +188,27 @@ int main(void)
 
     Scene scene;
 
-    auto plane = std::make_shared<Entity>("/assets/f22.obj", "/assets/f22.png");
-    plane->m_position = {0.0f, 0.1f, 3.0f, 0.0f};
+    auto plane = std::make_shared<Plane>("/assets/f22.obj", "/assets/f22.png");
+    plane->m_position = {0.0f, 0.1f, -15.0f, 0.0f};
     scene.add_entity(plane);
 
     auto runway = std::make_shared<Entity>("/assets/runway.obj", "/assets/runway.png");
-    runway->m_position = {0.0f, -0.5f, 3.0f, 0.0f};
+    runway->m_transform = matrix_make_translation(0.0f, -0.5f, 3.0f);
     scene.add_entity(runway);
 
     bool quit = false;
     bool print_stats = false;
     bool is_textured = true;
-    size_t nb_lights = 0;
+    size_t nb_lights = 1;
     bool clamp_s = false;
     bool clamp_t = false;
     bool perspective_correct = true;
     bool gouraud_shading = true;
 
     light_t lights[5];
-    lights[0].direction = (vec3d){0.0f, 0.0f, 1.0f, 0.0f};
+    lights[0].direction = (vec3d){0.0f, -1.0f, 0.0f, 0.0f};
     lights[0].ambient_color = (vec3d){0.1f, 0.1f, 0.1f, 1.0f};
-    lights[0].diffuse_color = (vec3d){0.5f, 0.5f, 0.5f, 1.0f};
+    lights[0].diffuse_color = (vec3d){1.0f, 1.0f, 1.0f, 1.0f};
     lights[1].direction = (vec3d){1.0f, 0.0f, 0.0f, 0.0f};
     lights[1].ambient_color = (vec3d){0.1f, 0.0f, 0.0f, 1.0f};
     lights[1].diffuse_color = (vec3d){0.2f, 0.0f, 0.0f, 1.0f};
@@ -226,8 +226,6 @@ int main(void)
 
     uint32_t counter = 0;
 
-    float yaw = 0.0f, pitch = 0.0f, roll = 0.0f;
-
     bool key_up = false;
     bool key_down = false;
     bool key_left = false;
@@ -237,15 +235,20 @@ int main(void)
     bool key_a = false;
     bool key_d = false;
 
+    float delta_time = 0.0f;
+
     while(!quit) {
+
         MEM_WRITE(LED, counter >> 2);
         counter++;
 
-        plane->m_rotation = quaternion_from_euler(0.0f, -(PI / 2), 0.0f);
+        plane->update(delta_time);
+
+        uint32_t t1_draw = MEM_READ(TIMER);
 
         clear(0x31A6);
 
-        camera.begin_drawing(pitch, yaw);
+        camera.begin_drawing(0.0f, 0.0f);
         scene.draw(&camera, lights, nb_lights);
         camera.end_drawing();
 
@@ -319,27 +322,24 @@ int main(void)
         }
 
         if (key_w)
-            camera.m_vec_camera = vector_add(&camera.m_vec_camera, &vec_forward);
+            plane->m_input_forward += 0.1f;
         if (key_s)
-            camera.m_vec_camera = vector_sub(&camera.m_vec_camera, &vec_forward);
+            plane->m_input_forward -= 0.1f;
         if (key_left)
-            yaw -= 0.1f;
+            plane->m_input_roll += 0.1f;
         if (key_right)
-            yaw += 0.1f;
+            plane->m_input_roll -= 0.1f;
         if (key_up)
-            pitch += 0.1f;
+            plane->m_input_pitch += 0.1f;
         if (key_down)
-            pitch -= 0.1f;
+            plane->m_input_pitch -= 0.1f;
         if (key_a)
-            roll -= 0.1f;
+            plane->m_input_yaw -= 0.1f;
         if (key_d)
-            roll += 0.1f;
+            plane->m_input_yaw += 0.1f;
 
-        // Clamp the pitch between -90 and 90 deg
-        if (pitch < -(PI / 2 - 0.01f))
-            pitch = -(PI / 2 - 0.01f);
-        if (pitch > (PI / 2 - 0.01f))
-            pitch = (PI / 2 - 0.01f);
+        uint32_t t2_draw = MEM_READ(TIMER);
+        delta_time = (t2_draw - t1_draw) / 1000.0f;
     }
 
     fl_shutdown();    
