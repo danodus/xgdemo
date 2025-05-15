@@ -15,6 +15,7 @@ void Camera::update(Views view, const Plane& plane, vec3d tower_position)
     if (view == Camera::Views::TOWER) {
         m_position = tower_position;
         m_target = plane.m_position;
+        m_up = {0.0f, 1.0f, 0.0f, 1.0f};
     } else {
         vec3d position = plane.transform_point((view == Camera::Views::FOLLOW) ? vec3d{0.0f, 1.0f, -5.0f, 1.0f} : vec3d{0.0f, 0.2f, 1.2f, 1.0f});
         auto dir = (view == Camera::Views::COCKPIT_LEFT) ? plane.get_left() :

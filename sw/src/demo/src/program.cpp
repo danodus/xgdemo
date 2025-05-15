@@ -264,6 +264,7 @@ int main(void)
         plane->update(delta_time);
         camera.update(view, *(std::dynamic_pointer_cast<Plane>(plane).get()), {13.0f, 20.0f, 0.0f});
         plane->m_visible = view != Camera::Views::COCKPIT_FORWARD;
+        tower->m_visible = view != Camera::Views::TOWER;
 
         uint32_t t1_draw = MEM_READ(TIMER);
 
