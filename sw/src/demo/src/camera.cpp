@@ -10,16 +10,25 @@ Camera::Camera(float fov)
     m_up = {0.0f, 1.0f, 0.0f, 1.0f};
 }
 
-void Camera::follow_plane(const Plane& plane)
+void Camera::update(Views view, const Plane& plane, vec3d tower_position)
 {
-    vec3d position = plane.transform_point({0.0f, 1.0f, -5.0f});
-    auto forward = plane.get_forward();
-    vec3d target = vector_add(&plane.m_position, &forward);
-    vec3d up = plane.get_up();
+    if (view == Camera::Views::TOWER) {
+        m_position = tower_position;
+        m_target = plane.m_position;
+    } else {
+        vec3d position = plane.transform_point((view == Camera::Views::FOLLOW) ? vec3d{0.0f, 1.0f, -5.0f, 1.0f} : vec3d{0.0f, 0.2f, 1.2f, 1.0f});
+        auto dir = (view == Camera::Views::COCKPIT_LEFT) ? plane.get_left() :
+            (view == Camera::Views::COCKPIT_RIGHT ) ? plane.get_right() :
+            plane.get_forward();
 
-    m_position = position;
-    m_target = target;
-    m_up = up;        
+        dir = vector_mul(&dir, 10.0f);
+        vec3d target = vector_add(&plane.m_position, &dir);
+        vec3d up = plane.get_up();
+
+        m_position = position;
+        m_target = target;
+        m_up = up;
+    }
 }
 
 void Camera::begin_drawing()

@@ -189,12 +189,31 @@ int main(void)
     Scene scene;
 
     auto plane = std::make_shared<Plane>("/assets/f22.obj", "/assets/f22.png");
-    plane->m_position = {0.0f, 0.1f, -15.0f, 0.0f};
+    plane->m_position = {0.0f, 0.1f, -15.0f, 1.0f};
     scene.add_entity(plane);
 
     auto runway = std::make_shared<Entity>("/assets/runway.obj", "/assets/runway.png");
     runway->m_transform = matrix_make_translation(0.0f, -0.5f, 3.0f);
     scene.add_entity(runway);
+
+    auto terrain = std::make_shared<Entity>("/assets/cube.obj", "/assets/cube.png");
+    auto m = matrix_make_identity();
+    auto s = matrix_make_scale(100.0f, 1.0f, 100.0f);
+    auto t = matrix_make_translation(0.0f, -2.1f, 0.0f);
+    m = matrix_multiply_matrix(&t, &m);
+    m = matrix_multiply_matrix(&s, &m);
+    terrain->m_transform = m;
+    scene.add_entity(terrain);
+
+    auto tower = std::make_shared<Plane>("/assets/cube.obj", "/assets/cube.png");
+    m = matrix_make_identity();
+    s = matrix_make_scale(3.0f, 10.0f, 3.0f);
+    t = matrix_make_translation(10.0f, 10.0f, 0.0f);
+    m = matrix_multiply_matrix(&t, &m);
+    m = matrix_multiply_matrix(&s, &m);
+    tower->m_transform = m;
+    scene.add_entity(tower);
+
 
     bool quit = false;
     bool print_stats = false;
@@ -236,12 +255,15 @@ int main(void)
     float delta_time = 0.0f;
     int frame_counter = 0;
 
+    Camera::Views view = Camera::Views::COCKPIT_FORWARD;
+
     while(!quit) {
 
         MEM_WRITE(LED, frame_counter >> 2);
 
         plane->update(delta_time);
-        camera.follow_plane(*(std::dynamic_pointer_cast<Plane>(plane).get()));
+        camera.update(view, *(std::dynamic_pointer_cast<Plane>(plane).get()), {13.0f, 20.0f, 0.0f});
+        plane->m_visible = view != Camera::Views::COCKPIT_FORWARD;
 
         uint32_t t1_draw = MEM_READ(TIMER);
 
@@ -281,6 +303,21 @@ int main(void)
                             break;
                         case SDLK_d:
                             key_d = true;
+                            break;
+                        case SDLK_1:
+                            view = Camera::Views::COCKPIT_FORWARD;
+                            break;
+                        case SDLK_2:
+                            view = Camera::Views::COCKPIT_LEFT;
+                            break;
+                        case SDLK_3:
+                            view = Camera::Views::COCKPIT_RIGHT;
+                            break;
+                        case SDLK_4:
+                            view = Camera::Views::FOLLOW;
+                            break;
+                        case SDLK_5:
+                            view = Camera::Views::TOWER;
                             break;
                     }
                     break;

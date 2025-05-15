@@ -10,6 +10,8 @@ public:
 
     mat4x4 m_transform, m_transform_normal;
 
+    bool m_visible = true;
+
 private:
     model_t m_model;
     texture_t m_texture;

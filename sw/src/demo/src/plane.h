@@ -19,12 +19,22 @@ public:
     quaternion m_rotation;    
 
     vec3d get_forward() const {
-        vec3d v = {0.0f, 0.0f, 1.0f};
+        vec3d v = {0.0f, 0.0f, 1.0f, 0.0f};
+        return vector_rotate_by_quaternion(&v, &m_rotation);
+    };
+
+    vec3d get_left() const {
+        vec3d v = {-1.0f, 0.0f, 0.0f, 0.0f};
+        return vector_rotate_by_quaternion(&v, &m_rotation);
+    };
+
+    vec3d get_right() const {
+        vec3d v = {1.0f, 0.0f, 0.0f, 0.0f};
         return vector_rotate_by_quaternion(&v, &m_rotation);
     };
 
     vec3d get_up() const {
-        vec3d v = {0.0f, 1.0f, 0.0f};
+        vec3d v = {0.0f, 1.0f, 0.0f, 0.0f};
         return vector_rotate_by_quaternion(&v, &m_rotation);
     };
 };

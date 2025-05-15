@@ -6,9 +6,18 @@
 class Camera {
 
 public:
+
+    enum class Views {
+        FOLLOW,
+        COCKPIT_FORWARD,
+        COCKPIT_LEFT,
+        COCKPIT_RIGHT,
+        TOWER
+    };
+
     Camera(float fov);
 
-    void follow_plane(const Plane& plane);
+    void update(Views view, const Plane& plane, vec3d tower_position);
 
     void begin_drawing();
     void end_drawing();
