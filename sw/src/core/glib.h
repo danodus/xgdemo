@@ -1,15 +1,10 @@
-// graphite.h
-// Copyright (c) 2021-2024 Daniel Cliche
-// SPDX-License-Identifier: MIT
+#ifndef GLIB_H
+#define GLIB_H
 
-#ifndef GRAPHITE_H
-#define GRAPHITE_H
-
-#include <stdbool.h>
-#include <stddef.h>
+#include <stdlib.h>
 #include <stdint.h>
-
-#include "array.h"
+#include <math.h>
+#include <stdbool.h>
 
 #ifndef PI
 #define PI 3.14159265358979323846f
@@ -67,7 +62,7 @@ typedef struct {
 
 typedef struct {
     size_t scale_x, scale_y;
-    uint32_t addr;
+    uint16_t* addr;
 } texture_t;
 
 typedef struct {
@@ -105,17 +100,8 @@ quaternion quaternion_multiply(const quaternion* q1, const quaternion* q2);
 quaternion quaternion_from_axis_angle(vec3d axis, float angle);
 vec3d vector_rotate_by_quaternion(const vec3d* v, const quaternion* q);
 
-void graphite_init(void);
-void get_fb_dimensions(int* fb_width, int* fb_height);
-
 void draw_model(int viewport_width, int viewport_height, const vec3d* vec_camera, const model_t* model, const mat4x4* mat_world,
                 const mat4x4* mat_normal, const mat4x4* mat_projection, const mat4x4* mat_view, const light_t* lights, size_t nb_lights, const texture_t* texture,
                 bool clamp_s, bool clamp_t, bool perspective_correct);
-
-bool load_model(model_t *model, const char *obj_filename);
-bool load_texture(texture_t *texture, const char *path);
-
-void clear(unsigned int color);
-void swap(void);
 
 #endif

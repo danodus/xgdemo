@@ -12,13 +12,13 @@ flash: hw
 	sleep 2
 
 sw:
-	make -C sw/src/demo
+	make -C sw/src/demo_hw
 
 run: hw sw
-	make -C sw/src/demo run
+	make -C sw/src/demo_hw run
 
 clean:
 	make -C hw/xgsoc/rtl/ulx3s clean
-	make -C sw/src/demo clean
+	make -C sw/src/demo_hw clean
 
 .PHONY: all hw sw prog run	

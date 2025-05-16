@@ -1,6 +1,9 @@
 #pragma once
 
-#include "common.h"
+extern "C" {
+    #include "graphite.h"
+}
+
 #include "plane.h"
 
 class Camera {

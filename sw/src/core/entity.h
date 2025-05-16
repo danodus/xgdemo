@@ -1,6 +1,8 @@
 #pragma once
 
-#include "common.h"
+extern "C" {
+    #include "graphite.h"
+}
 
 class Entity
 {

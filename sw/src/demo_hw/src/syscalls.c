@@ -384,12 +384,12 @@ clock_t _times(struct tms *buf)
 {
 	clock_t c = MEM_READ(TIMER);
 	if (buf) {
-		buf->tms_utime = c;
+		buf->tms_utime = c * (CLOCKS_PER_SEC / 1000);
 		buf->tms_stime = 0;
 		buf->tms_cutime = 0;
 		buf->tms_cstime = 0;
 	}
-	return c;
+	return c * (CLOCKS_PER_SEC / 1000);
 }
 
 int _utimes(const char *filename, const struct timeval times[2])

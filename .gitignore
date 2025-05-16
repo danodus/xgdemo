@@ -1,3 +1,3 @@
 .DS_Store
 .vscode
-sw/src/demo/build
+sw/src/**/build

@@ -14,12 +14,12 @@ OBJDUMP = ${RISCV_TOOLCHAIN_PATH}${RISCV_TOOLCHAIN_PREFIX}objdump
 CC = ${RISCV_TOOLCHAIN_PATH}${RISCV_TOOLCHAIN_PREFIX}gcc
 CXX = ${RISCV_TOOLCHAIN_PATH}${RISCV_TOOLCHAIN_PREFIX}g++
 
-SRCS = start.S $(shell find $(SRC_DIRS) -name '*.cpp' -or -name '*.c' -or -name '*.S')
+SRCS = start.S $(shell find -L $(SRC_DIRS) -name '*.cpp' -or -name '*.c' -or -name '*.S')
 OBJS := $(SRCS:%=./$(BUILD_DIR)/%.o)
 DEPS := $(OBJS:.o=.d)
 
 # Every folder in ./src will need to be passed to GCC so that it can find header files
-INC_DIRS := $(shell find $(SRC_DIRS) -type d)
+INC_DIRS := $(shell find $(SRC_DIRS) -type d) $(shell find $(SRC_DIRS) -type ld)
 # Add a prefix to INC_DIRS. So moduleA would become -ImoduleA. GCC understands this -I flag
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
