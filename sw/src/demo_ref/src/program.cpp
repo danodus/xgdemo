@@ -92,8 +92,7 @@ void draw_pixel(int x, int y, int color) {
     SDL_RenderDrawPoint(renderer, x, y);
 }
 
-#define FX(x) ((int32_t)((x) * (float)(1 << 14)))
-extern "C" void xd_draw_triangle(vec3d p[3], vec2d t[3], vec3d c[3], texture_t* tex, bool clamp_s, bool clamp_t, int texture_scale_x, int texture_scale_y,
+extern "C" void draw_triangle(vec3d p[3], vec2d t[3], vec3d c[3], texture_t* tex, bool clamp_s, bool clamp_t,
                       bool depth_test, bool perspective_correct)
 {
     if (g_rasterizer_barycentric) {
@@ -205,7 +204,7 @@ int main() {
         // Draw model
         texture_t dummy_texture;
         draw_model(screen_width, screen_height, &vec_camera, current_model, &mat_world, is_gouraud_shading ? &mat_normal : NULL, &mat_proj, &mat_view, lights, nb_lights,
-                   is_wireframe, is_textured ? &dummy_texture : NULL, clamp_s, clamp_t, 0, 0, perspective_correct);
+                   is_textured ? &dummy_texture : NULL, clamp_s, clamp_t, perspective_correct);
 
         SDL_RenderPresent(renderer);
 

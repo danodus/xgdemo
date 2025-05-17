@@ -4,6 +4,8 @@
 
 #define MAX_NB_TRIANGLES    16      // maximum number of triangles produced by the clipping
 
+#define Z_NEAR  0.3     // near clipping plane
+
 void draw_triangle(vec3d p[3], vec2d t[3], vec3d c[3], const texture_t* texture, bool clamp_s, bool clamp_t, bool depth_test, bool perspective_correct);
 
 vec3d matrix_multiply_vector(const mat4x4* m, const vec3d* i) {
@@ -272,7 +274,7 @@ mat4x4 matrix_make_projection(int viewport_width, int viewport_height, float fov
     mat4x4 mat_proj;
 
     // projection matrix
-    float near = 0.3f;
+    float near = Z_NEAR;
     float far = 1000.0f;
     float aspect_ratio = (float)viewport_height / (float)viewport_width;
     float fov_rad = 1.0f / tanf(fov * 0.5f / 180.0f * 3.14159f);
@@ -701,8 +703,7 @@ void draw_model(int viewport_width, int viewport_height, const vec3d* vec_camera
             // clip viewed triangle against near plane, this could form two additional triangles
             int nb_clipped_triangles = 0;
             triangle_t clipped[2];
-            const float z_near = 0.3f;
-            vec3d plane_p = {0.0f, 0.0f, z_near, 1.0f};
+            vec3d plane_p = {0.0f, 0.0f, Z_NEAR, 1.0f};
             vec3d plane_n = {0.0f, 0.0f, 1.0f, 1.0f};
             nb_clipped_triangles = triangle_clip_against_plane(&plane_p, &plane_n, &tri_viewed, &clipped[0], &clipped[1]);
 
