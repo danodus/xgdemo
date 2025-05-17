@@ -46,7 +46,7 @@ void sim_run() {
     bool quit = false;
     bool print_stats = false;
     bool is_textured = true;
-    size_t nb_lights = 0;
+    size_t nb_lights = 1;
     bool clamp_s = false;
     bool clamp_t = false;
     bool perspective_correct = true;
@@ -183,10 +183,10 @@ void sim_run() {
         }
 
         if (key_w)
-            plane->m_input_forward += 0.2f;
+            plane->m_input_forward += 0.1f;
         if (key_s)
             if (plane->m_input_forward > 0.0f)
-                plane->m_input_forward -= 0.2f;
+                plane->m_input_forward -= 0.1f;
         if (key_left)
             plane->m_input_roll = 0.5f;
         else if (key_right)

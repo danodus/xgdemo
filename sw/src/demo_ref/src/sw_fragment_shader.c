@@ -3,12 +3,10 @@
 #include <math.h>
 
 extern uint16_t tex32x32[];
-extern uint16_t tex32x64[];
-extern uint16_t tex256x2048[];
 
-uint16_t *tex = tex256x2048;
-#define TEXTURE_WIDTH   256
-#define TEXTURE_HEIGHT  2048
+uint16_t *tex = tex32x32;
+#define TEXTURE_WIDTH   32
+#define TEXTURE_HEIGHT  32
 
 typedef struct {
     fx32 r, g, b, a;
