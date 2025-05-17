@@ -50,7 +50,7 @@ static int max3(int a, int b, int c) { return max(a, max(b, c)); }
 void sw_draw_triangle_barycentric(fx32 x0, fx32 y0, fx32 z0, fx32 u0, fx32 v0, fx32 r0, fx32 g0, fx32 b0, fx32 a0,
                       fx32 x1, fx32 y1, fx32 z1, fx32 u1, fx32 v1, fx32 r1, fx32 g1, fx32 b1, fx32 a1,
                       fx32 x2, fx32 y2, fx32 z2, fx32 u2, fx32 v2, fx32 r2, fx32 g2, fx32 b2, fx32 a2,
-                      bool texture, bool clamp_s, bool clamp_t, bool depth_test, bool persp_correct)
+                      const uint16_t* tex_addr, int tex_scale_x, int tex_scale_y, bool clamp_s, bool clamp_t, bool depth_test, bool persp_correct)
 {
     fx32 vv0[3] = {x0, y0, z0};
     fx32 vv1[3] = {x1, y1, z1};
@@ -100,7 +100,7 @@ void sw_draw_triangle_barycentric(fx32 x0, fx32 y0, fx32 z0, fx32 u0, fx32 v0, f
                 // Perspective correction
                 fx32 z = MUL(w0, vv0[2]) + MUL(w1, vv1[2]) + MUL(w2, vv2[2]);
 
-                sw_fragment_shader(g_fb_width, g_fb_height, x, y, z, u, v, r, g, b, a, clamp_s, clamp_t, depth_test, texture, g_depth_buffer, persp_correct, g_draw_pixel_fn);
+                sw_fragment_shader(g_fb_width, g_fb_height, x, y, z, u, v, r, g, b, a, clamp_s, clamp_t, depth_test, tex_addr, tex_scale_x, tex_scale_y, g_depth_buffer, persp_correct, g_draw_pixel_fn);
             }
         }
 }

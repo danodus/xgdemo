@@ -26,7 +26,8 @@ typedef struct {
     fx32 dr0_step, dg0_step, db0_step, da0_step;
     fx32 dr1_step, dg1_step, db1_step, da1_step;
     bool bottom_half;
-    bool tex;
+    const uint16_t* tex_addr;
+    int tex_scale_x, tex_scale_y;
     bool persp_correct;
     bool clamp_s, clamp_t;
     bool depth_test;
@@ -140,7 +141,7 @@ void rasterize_triangle_half(bool bottom_half, rasterize_triangle_half_params_t*
             b = MUL(FX(1.0f) - tt, col_sb) + MUL(tt, col_eb);
             a = MUL(FX(1.0f) - tt, col_sa) + MUL(tt, col_ea);
 
-            sw_fragment_shader(g_fb_width, g_fb_height, x, y, z, s, t, r, g, b, a, p->clamp_s, p->clamp_t, p->depth_test, p->tex, g_depth_buffer, p->persp_correct, g_draw_pixel_fn);
+            sw_fragment_shader(g_fb_width, g_fb_height, x, y, z, s, t, r, g, b, a, p->clamp_s, p->clamp_t, p->depth_test, p->tex_addr, p->tex_scale_x, p->tex_scale_y, g_depth_buffer, p->persp_correct, g_draw_pixel_fn);
 
             tt += tstep;
         }
@@ -150,7 +151,7 @@ void rasterize_triangle_half(bool bottom_half, rasterize_triangle_half_params_t*
 void sw_draw_triangle_standard(fx32 x0, fx32 y0, fx32 w0, fx32 s0, fx32 t0, fx32 r0, fx32 g0, fx32 b0, fx32 a0,
                       fx32 x1, fx32 y1, fx32 w1, fx32 s1, fx32 t1, fx32 r1, fx32 g1, fx32 b1, fx32 a1,
                       fx32 x2, fx32 y2, fx32 w2, fx32 u2, fx32 v2, fx32 r2, fx32 g2, fx32 b2, fx32 a2,
-                      bool texture, bool clamp_s, bool clamp_t, bool depth_test, bool persp_correct) {
+                      const uint16_t* tex_addr, int tex_scale_x, int tex_scale_y, bool clamp_s, bool clamp_t, bool depth_test, bool persp_correct) {
     int xx0 = INT(x0);
     int yy0 = INT(y0);
     int xx1 = INT(x1);
@@ -216,7 +217,9 @@ void sw_draw_triangle_standard(fx32 x0, fx32 y0, fx32 w0, fx32 s0, fx32 t0, fx32
     p.b1 = b1;
     p.a1 = a1;
 
-    p.tex = texture;
+    p.tex_addr = tex_addr;
+    p.tex_scale_x = tex_scale_x;
+    p.tex_scale_y = tex_scale_y;
     p.persp_correct = persp_correct;
     p.clamp_s = clamp_s;
     p.clamp_t = clamp_t;

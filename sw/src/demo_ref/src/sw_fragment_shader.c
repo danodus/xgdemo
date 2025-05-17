@@ -1,10 +1,8 @@
 #include "sw_rasterizer.h"
 
 #include <math.h>
+#include <stddef.h>
 
-extern uint16_t tex32x32[];
-
-uint16_t *tex = tex32x32;
 #define TEXTURE_WIDTH   32
 #define TEXTURE_HEIGHT  32
 
@@ -15,13 +13,16 @@ typedef struct {
 #define RECIPROCAL_NUMERATOR 256.0f
 static fx32 reciprocal(fx32 x) { return x > 0 ? DIV(FX(RECIPROCAL_NUMERATOR), x) : FX(RECIPROCAL_NUMERATOR); }
 
-color_t texture_sample_color(bool texture, fx32 u, fx32 v) {
-    if (texture) {
-        int x = INT(MUL(u, FXI(TEXTURE_WIDTH)));
-        int y = INT(MUL(v, FXI(TEXTURE_HEIGHT)));
-        if (x >= TEXTURE_WIDTH) x = TEXTURE_WIDTH - 1;
-        if (y >= TEXTURE_HEIGHT) y = TEXTURE_HEIGHT - 1;
-        uint16_t c = tex[y * TEXTURE_WIDTH + x];
+color_t texture_sample_color(const uint16_t* tex_addr, int tex_scale_x, int tex_scale_y, fx32 u, fx32 v) {
+    int tex_width = TEXTURE_WIDTH << tex_scale_x;
+    int tex_height = TEXTURE_HEIGHT << tex_scale_y;
+
+    if (tex_addr != NULL) {
+        int x = INT(MUL(u, FXI(tex_width)));
+        int y = INT(MUL(v, FXI(tex_height)));
+        if (x >= tex_width) x = tex_width - 1;
+        if (y >= tex_height) y = tex_height - 1;
+        uint16_t c = tex_addr[y * tex_width + x];
         uint8_t a = (c >> 12) & 0xF;
         uint8_t r = (c >> 8) & 0xF;
         uint8_t g = (c >> 4) & 0xF;
@@ -45,13 +46,16 @@ static fx32 wrap(fx32 v) {
     if (v < FX(0.0f)) {
         v = FX(0.0f);
     } else if (v >= FX(1.0f)) {
-        //v = FX(fmod(FLT(v), 1.0f));
+#if FIXED_POINT
         v = v & 0x3FFF;
+#else
+        v = FX(fmod(FLT(v), 1.0f));
+#endif
     }
     return v;
 }
 
-void sw_fragment_shader(int fb_width, int fb_height, int x, int y, fx32 z, fx32 u, fx32 v, fx32 r, fx32 g, fx32 b, fx32 a, bool clamp_s, bool clamp_t, bool depth_test, bool texture, fx32* depth_buffer, bool persp_correct, draw_pixel_fn_t draw_pixel_fn) {
+void sw_fragment_shader(int fb_width, int fb_height, int x, int y, fx32 z, fx32 u, fx32 v, fx32 r, fx32 g, fx32 b, fx32 a, bool clamp_s, bool clamp_t, bool depth_test, const uint16_t* tex_addr, int tex_scale_x, int tex_scale_y, fx32* depth_buffer, bool persp_correct, draw_pixel_fn_t draw_pixel_fn) {
     if (x < 0 || y < 0 || x >= fb_width || y >= fb_height)
         return;
     int depth_index = y * fb_width + x;
@@ -81,7 +85,7 @@ void sw_fragment_shader(int fb_width, int fb_height, int x, int y, fx32 z, fx32 
             v = wrap(v);
         }
 
-        color_t sample = texture_sample_color(texture, u, v);
+        color_t sample = texture_sample_color(tex_addr, tex_scale_x, tex_scale_y, u, v);
         r = MUL(r, sample.r);
         g = MUL(g, sample.g);
         b = MUL(b, sample.b);

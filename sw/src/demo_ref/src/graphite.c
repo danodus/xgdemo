@@ -25,9 +25,9 @@ void draw_triangle(vec3d p[3], vec2d t[3], vec3d c[3], texture_t* tex, bool clam
                       bool depth_test, bool perspective_correct)
 {
     if (g_rasterizer_barycentric) {
-        sw_draw_triangle_barycentric(FX(p[0].x), FX(p[0].y), FX(t[0].w), FX(t[0].u), FX(t[0].v), FX(c[0].x), FX(c[0].y), FX(c[0].z), FX(c[0].w), FX(p[1].x), FX(p[1].y), FX(t[1].w), FX(t[1].u), FX(t[1].v), FX(c[1].x), FX(c[1].y), FX(c[1].z), FX(c[1].w), FX(p[2].x), FX(p[2].y), FX(t[2].w), FX(t[2].u), FX(t[2].v), FX(c[2].x), FX(c[2].y), FX(c[2].z), FX(c[2].w), (tex != NULL) ? true : false, clamp_s, clamp_t, depth_test, perspective_correct);
+        sw_draw_triangle_barycentric(FX(p[0].x), FX(p[0].y), FX(t[0].w), FX(t[0].u), FX(t[0].v), FX(c[0].x), FX(c[0].y), FX(c[0].z), FX(c[0].w), FX(p[1].x), FX(p[1].y), FX(t[1].w), FX(t[1].u), FX(t[1].v), FX(c[1].x), FX(c[1].y), FX(c[1].z), FX(c[1].w), FX(p[2].x), FX(p[2].y), FX(t[2].w), FX(t[2].u), FX(t[2].v), FX(c[2].x), FX(c[2].y), FX(c[2].z), FX(c[2].w), tex->addr, tex->scale_x, tex->scale_y, clamp_s, clamp_t, depth_test, perspective_correct);
     } else {
-        sw_draw_triangle_standard(FX(p[0].x), FX(p[0].y), FX(t[0].w), FX(t[0].u), FX(t[0].v), FX(c[0].x), FX(c[0].y), FX(c[0].z), FX(c[0].w), FX(p[1].x), FX(p[1].y), FX(t[1].w), FX(t[1].u), FX(t[1].v), FX(c[1].x), FX(c[1].y), FX(c[1].z), FX(c[1].w), FX(p[2].x), FX(p[2].y), FX(t[2].w), FX(t[2].u), FX(t[2].v), FX(c[2].x), FX(c[2].y), FX(c[2].z), FX(c[2].w), (tex != NULL) ? true : false, clamp_s, clamp_t, depth_test, perspective_correct);
+        sw_draw_triangle_standard(FX(p[0].x), FX(p[0].y), FX(t[0].w), FX(t[0].u), FX(t[0].v), FX(c[0].x), FX(c[0].y), FX(c[0].z), FX(c[0].w), FX(p[1].x), FX(p[1].y), FX(t[1].w), FX(t[1].u), FX(t[1].v), FX(c[1].x), FX(c[1].y), FX(c[1].z), FX(c[1].w), FX(p[2].x), FX(p[2].y), FX(t[2].w), FX(t[2].u), FX(t[2].v), FX(c[2].x), FX(c[2].y), FX(c[2].z), FX(c[2].w), tex->addr, tex->scale_x, tex->scale_y, clamp_s, clamp_t, depth_test, perspective_correct);
     }
 }
 
