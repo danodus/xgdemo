@@ -14,7 +14,8 @@ static int screen_scale = 3;
 
 static SDL_Renderer* renderer;
 
-bool g_rasterizer_barycentric = true;
+// 0: standard, 1: standard2, 2: barycentric
+int g_rasterizer_type = 1;
 
 void draw_pixel(int x, int y, int color) {
 
@@ -34,6 +35,7 @@ void draw_pixel(int x, int y, int color) {
 
 int main() {
     sw_init_rasterizer_standard(screen_width, screen_height, draw_pixel);
+    sw_init_rasterizer_standard2(screen_width, screen_height, draw_pixel);
     sw_init_rasterizer_barycentric(screen_width, screen_height, draw_pixel);
 
     SDL_Init(SDL_INIT_VIDEO);
@@ -49,12 +51,13 @@ int main() {
 
     graphite_init(renderer, screen_width, screen_height);
 
-    sim_run();
+    sim_run(&g_rasterizer_type);
 
     SDL_DestroyWindow(window);
     SDL_Quit();
 
     sw_dispose_rasterizer_barycentric();
+    sw_dispose_rasterizer_standard2();
     sw_dispose_rasterizer_standard();
 
     return 0;

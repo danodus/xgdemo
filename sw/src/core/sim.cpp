@@ -10,7 +10,7 @@ extern "C" {
 #include <cstdio>
 #include <SDL.h>
 
-void sim_run() {
+void sim_run(int *rasterizer_type) {
 
     Camera camera(60.0f);
 
@@ -146,6 +146,18 @@ void sim_run() {
                         case SDLK_5:
                             view = Camera::Views::TOWER;
                             break;
+                        case SDLK_7:
+                            if (rasterizer_type)
+                                *rasterizer_type = 0;
+                            break;
+                        case SDLK_8:
+                            if (rasterizer_type)
+                                *rasterizer_type = 1;
+                            break;
+                        case SDLK_9:
+                            if (rasterizer_type)
+                                *rasterizer_type = 2;
+                            break;
                     }
                     break;
                 case SDL_KEYUP:
@@ -188,21 +200,21 @@ void sim_run() {
             if (plane->m_input_forward > 0.0f)
                 plane->m_input_forward -= 0.1f;
         if (key_left)
-            plane->m_input_roll = 0.5f;
+            plane->m_input_roll = 0.8f;
         else if (key_right)
-            plane->m_input_roll = -0.5f;
+            plane->m_input_roll = -0.8f;
         else
             plane->m_input_roll = 0.0f;
         if (key_up)
-            plane->m_input_pitch = 0.3f;
+            plane->m_input_pitch = 0.8f;
         else if (key_down)
-            plane->m_input_pitch = -0.3f;
+            plane->m_input_pitch = -0.8f;
         else
             plane->m_input_pitch = 0.0f;
         if (key_a)
-            plane->m_input_yaw = -0.5f;
+            plane->m_input_yaw = -0.8f;
         else if (key_d)
-            plane->m_input_yaw = 0.5;
+            plane->m_input_yaw = 0.8;
         else
             plane->m_input_yaw = 0.0f;
 

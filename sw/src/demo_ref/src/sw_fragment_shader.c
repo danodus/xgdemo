@@ -47,7 +47,7 @@ static fx32 wrap(fx32 v) {
         v = FX(0.0f);
     } else if (v >= FX(1.0f)) {
 #if FIXED_POINT
-        v = v & 0x3FFF;
+        v = v & _FRACTION_MASK(SCALE);
 #else
         v = FX(fmod(FLT(v), 1.0f));
 #endif

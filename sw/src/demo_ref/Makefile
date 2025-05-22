@@ -29,11 +29,11 @@ $(BUILD_DIR)/%.S.o: %.S
 
 $(BUILD_DIR)/%.c.o: %.c
 	mkdir -p $(dir $@)
-	${CC} -MMD -MP -O3 $(INC_FLAGS) $(shell sdl2-config --cflags) -c $< -o $@
+	${CC} -MMD -MP -g $(INC_FLAGS) $(shell sdl2-config --cflags) -c $< -o $@
 
 $(BUILD_DIR)/%.cpp.o: %.cpp
 	mkdir -p $(dir $@)
-	${CXX} -std=c++17 -MMD -MP -O3 $(INC_FLAGS) $(shell sdl2-config --cflags) -c $< -o $@
+	${CXX} -std=c++17 -MMD -MP -g $(INC_FLAGS) $(shell sdl2-config --cflags) -c $< -o $@
 
 $(BUILD_DIR)/program: $(OBJS)
 	mkdir -p $(dir $@)

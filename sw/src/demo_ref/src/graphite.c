@@ -20,12 +20,14 @@ static SDL_Renderer* g_renderer;
 static int g_fb_width, g_fb_height;
 
 //bool g_rasterizer_barycentric = true;
-extern bool g_rasterizer_barycentric;
+extern int g_rasterizer_type;
 void draw_triangle(vec3d p[3], vec2d t[3], vec3d c[3], texture_t* tex, bool clamp_s, bool clamp_t,
                       bool depth_test, bool perspective_correct)
 {
-    if (g_rasterizer_barycentric) {
+    if (g_rasterizer_type == 2) {
         sw_draw_triangle_barycentric(FX(p[0].x), FX(p[0].y), FX(t[0].w), FX(t[0].u), FX(t[0].v), FX(c[0].x), FX(c[0].y), FX(c[0].z), FX(c[0].w), FX(p[1].x), FX(p[1].y), FX(t[1].w), FX(t[1].u), FX(t[1].v), FX(c[1].x), FX(c[1].y), FX(c[1].z), FX(c[1].w), FX(p[2].x), FX(p[2].y), FX(t[2].w), FX(t[2].u), FX(t[2].v), FX(c[2].x), FX(c[2].y), FX(c[2].z), FX(c[2].w), tex->addr, tex->scale_x, tex->scale_y, clamp_s, clamp_t, depth_test, perspective_correct);
+    } else if (g_rasterizer_type == 1) {
+        sw_draw_triangle_standard2(FX(p[0].x), FX(p[0].y), FX(t[0].w), FX(t[0].u), FX(t[0].v), FX(c[0].x), FX(c[0].y), FX(c[0].z), FX(c[0].w), FX(p[1].x), FX(p[1].y), FX(t[1].w), FX(t[1].u), FX(t[1].v), FX(c[1].x), FX(c[1].y), FX(c[1].z), FX(c[1].w), FX(p[2].x), FX(p[2].y), FX(t[2].w), FX(t[2].u), FX(t[2].v), FX(c[2].x), FX(c[2].y), FX(c[2].z), FX(c[2].w), tex->addr, tex->scale_x, tex->scale_y, clamp_s, clamp_t, depth_test, perspective_correct);
     } else {
         sw_draw_triangle_standard(FX(p[0].x), FX(p[0].y), FX(t[0].w), FX(t[0].u), FX(t[0].v), FX(c[0].x), FX(c[0].y), FX(c[0].z), FX(c[0].w), FX(p[1].x), FX(p[1].y), FX(t[1].w), FX(t[1].u), FX(t[1].v), FX(c[1].x), FX(c[1].y), FX(c[1].z), FX(c[1].w), FX(p[2].x), FX(p[2].y), FX(t[2].w), FX(t[2].u), FX(t[2].v), FX(c[2].x), FX(c[2].y), FX(c[2].z), FX(c[2].w), tex->addr, tex->scale_x, tex->scale_y, clamp_s, clamp_t, depth_test, perspective_correct);
     }
@@ -56,10 +58,13 @@ void clear(unsigned int color) {
 
     SDL_SetRenderDrawColor(g_renderer, r, g, b, SDL_ALPHA_OPAQUE);
     SDL_RenderClear(g_renderer);
-    if (g_rasterizer_barycentric)
+    if (g_rasterizer_type == 2)
         sw_clear_depth_buffer_barycentric();
-    else
+    else if (g_rasterizer_type == 1) {
+        sw_clear_depth_buffer_standard2();
+    } else {
         sw_clear_depth_buffer_standard();
+    }
 }
 
 void swap(void) {

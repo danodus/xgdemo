@@ -45,7 +45,7 @@ int main(void)
 
     graphite_init();
 
-    sim_run();
+    sim_run(nullptr);
 
     fl_shutdown();    
 

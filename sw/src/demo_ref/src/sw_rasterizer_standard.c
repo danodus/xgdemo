@@ -44,19 +44,19 @@ void sw_dispose_rasterizer_standard() { free(g_depth_buffer); }
 
 void sw_clear_depth_buffer_standard() { memset(g_depth_buffer, FX(0.0f), g_fb_width * g_fb_height * sizeof(fx32)); }
 
-void swapi(int* a, int* b) {
+static void swapi(int* a, int* b) {
     int t = *a;
     *a = *b;
     *b = t;
 }
 
-void swapf(fx32* a, fx32* b) {
+static void swapf(fx32* a, fx32* b) {
     fx32 t = *a;
     *a = *b;
     *b = t;
 }
 
-void rasterize_triangle_half(bool bottom_half, rasterize_triangle_half_params_t* p) {
+static void rasterize_triangle_half(bool bottom_half, rasterize_triangle_half_params_t* p) {
     int sy, ey, sx;
     fx32 ss, st, sw, sr, sg, sb, sa;
 

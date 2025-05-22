@@ -9,7 +9,7 @@
 #include <stdint.h>
 
 #ifndef FIXED_POINT
-#define FIXED_POINT 1
+#define FIXED_POINT 0
 #endif
 
 #define _FRACTION_MASK(scale) (0xffffffff >> (32 - scale))
@@ -77,8 +77,11 @@ typedef float fx32;
 typedef void (*draw_pixel_fn_t)(int x, int y, int color);
 
 void sw_init_rasterizer_standard(int fb_width, int fb_height, draw_pixel_fn_t draw_pixel_fn);
+void sw_init_rasterizer_standard2(int fb_width, int fb_height, draw_pixel_fn_t draw_pixel_fn);
 void sw_dispose_rasterizer_standard();
+void sw_dispose_rasterizer_standard2();
 void sw_clear_depth_buffer_standard();
+void sw_clear_depth_buffer_standard2();
 
 void sw_init_rasterizer_barycentric(int fb_width, int fb_height, draw_pixel_fn_t draw_pixel_fn);
 void sw_dispose_rasterizer_barycentric();
@@ -91,9 +94,14 @@ void sw_draw_triangle_standard(fx32 x0, fx32 y0, fx32 z0, fx32 u0, fx32 v0, fx32
                       fx32 x2, fx32 y2, fx32 z2, fx32 u2, fx32 v2, fx32 r2, fx32 g2, fx32 b2, fx32 a2,
                       const uint16_t* tex_addr, int tex_scale_x, int tex_scale_y, bool clamp_s, bool clamp_t, bool depth_test, bool persp_correct);
 
+void sw_draw_triangle_standard2(fx32 x0, fx32 y0, fx32 z0, fx32 u0, fx32 v0, fx32 r0, fx32 g0, fx32 b0, fx32 a0,
+                      fx32 x1, fx32 y1, fx32 z1, fx32 u1, fx32 v1, fx32 r1, fx32 g1, fx32 b1, fx32 a1,
+                      fx32 x2, fx32 y2, fx32 z2, fx32 u2, fx32 v2, fx32 r2, fx32 g2, fx32 b2, fx32 a2,
+                      const uint16_t* tex_addr, int tex_scale_x, int tex_scale_y, bool clamp_s, bool clamp_t, bool depth_test, bool persp_correct);
+
 void sw_draw_triangle_barycentric(fx32 x0, fx32 y0, fx32 z0, fx32 u0, fx32 v0, fx32 r0, fx32 g0, fx32 b0, fx32 a0,
                       fx32 x1, fx32 y1, fx32 z1, fx32 u1, fx32 v1, fx32 r1, fx32 g1, fx32 b1, fx32 a1,
                       fx32 x2, fx32 y2, fx32 z2, fx32 u2, fx32 v2, fx32 r2, fx32 g2, fx32 b2, fx32 a2,
-                      const uint16_t* tex_addr, int tex_scale_x, int texture_scale_y, bool clamp_s, bool clamp_t, bool depth_test, bool persp_correct);
+                      const uint16_t* tex_addr, int tex_scale_x, int tex_scale_y, bool clamp_s, bool clamp_t, bool depth_test, bool persp_correct);
 
 #endif  // SW_RASTERIZER_H
