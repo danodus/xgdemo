@@ -10,7 +10,7 @@ typedef struct {
     fx32 r, g, b, a;
 } color_t;
 
-#define RECIPROCAL_NUMERATOR 256.0f
+#define RECIPROCAL_NUMERATOR 1.0f
 static fx32 reciprocal(fx32 x) { return x > 0 ? DIV(FX(RECIPROCAL_NUMERATOR), x) : FX(RECIPROCAL_NUMERATOR); }
 
 color_t texture_sample_color(const uint16_t* tex_addr, int tex_scale_x, int tex_scale_y, fx32 u, fx32 v) {

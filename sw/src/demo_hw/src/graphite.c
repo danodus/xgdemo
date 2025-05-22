@@ -52,6 +52,7 @@
 #define MEM_WRITE(_addr_, _value_) (*((volatile unsigned int *)(_addr_)) = _value_)
 #define MEM_READ(_addr_) *((volatile unsigned int *)(_addr_))
 
+#define _FLOAT_TO_FIXED(x, scale) ((int32_t)((x) * (float)(1 << scale)))
 #define PARAM(x) (_FLOAT_TO_FIXED(x, 14))
 
 struct Command {

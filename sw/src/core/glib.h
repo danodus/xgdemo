@@ -10,8 +10,6 @@
 #define PI 3.14159265358979323846f
 #endif
 
-#define _FLOAT_TO_FIXED(x, scale) ((int32_t)((x) * (float)(1 << scale)))
-
 typedef struct {
     float u, v, w;
 } vec2d;

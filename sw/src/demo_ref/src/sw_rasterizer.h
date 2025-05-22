@@ -9,51 +9,37 @@
 #include <stdint.h>
 
 #ifndef FIXED_POINT
-#define FIXED_POINT 0
+#define FIXED_POINT 1
 #endif
 
-#define _FRACTION_MASK(scale) (0xffffffff >> (32 - scale))
-#define _WHOLE_MASK(scale) (0xffffffff ^ FRACTION_MASK(scale))
+#define _FRACTION_MASK(scale) (0xffffffffffffffff >> (64 - scale))
+#define _WHOLE_MASK(scale) (0xffffffffffffffff ^ FRACTION_MASK(scale))
 
-#define _FLOAT_TO_FIXED(x, scale) ((int32_t)((x) * (float)(1 << scale)))
-#define _FIXED_TO_FLOAT(x, scale) ((float)(x) / (double)(1 << scale))
-#define _INT_TO_FIXED(x, scale) ((x) << scale)
-#define _FIXED_TO_INT(x, scale) ((x) >> scale)
-#define _FRACTION_PART(x, scale) ((x)&FRACTION_MASK(scale))
-#define _WHOLE_PART(x, scale) ((x)&WHOLE_MASK(scale))
+#define _FLOAT_TO_FIXED(x, scale) ((int64_t)((x) * (float)(1L << scale)))
+#define _FIXED_TO_FLOAT(x, scale) ((float)(x) / (double)(1L << scale))
+#define _INT_TO_FIXED(x, scale) ((int64_t)(x) << scale)
+#define _FIXED_TO_INT(x, scale) ((int64_t)(x) >> scale)
+#define _FRACTION_PART(x, scale) ((int64_t)(x)&FRACTION_MASK(scale))
+#define _WHOLE_PART(x, scale) ((int64_t)(x)&WHOLE_MASK(scale))
 
-#define _MUL(x, y, scale) (int32_t)(((int64_t)(x) * (int64_t)(y)) >> scale)
-#define _DIV(x, y, scale) (int32_t)(((int64_t)(x) << scale) / (y))
+#define _MUL(x, y, scale) (int64_t)(((int64_t)(x) * (int64_t)(y)) >> scale)
+#define _DIV(x, y, scale) (int64_t)(((int64_t)(x) << scale) / (y))
+
+// #define _MUL(x, y, scale) ((int64_t)((x) >> (scale / 2)) * (int)((y) >> (scale / 2)))
+// #define _DIV(x, y, scale) (((int64_t)(x) << (scale / 2)) / (int)((y) >> (scale / 2)))
 
 #if FIXED_POINT
 
-typedef int32_t fx32;
+typedef int64_t fx32;
 
-#define SCALE 14
+#define SCALE 24
 
 #define FX(x) ((fx32)_FLOAT_TO_FIXED(x, SCALE))
 #define FXI(x) ((fx32)_INT_TO_FIXED(x, SCALE))
 #define INT(x) ((int)_FIXED_TO_INT(x, SCALE))
 #define FLT(x) ((float)_FIXED_TO_FLOAT(x, SCALE))
 #define DIV(x, y) _DIV(x, y, SCALE)
-
-#define SIN(x) FX(sinf(_FIXED_TO_FLOAT(x, SCALE)))
-#define COS(x) FX(cosf(_FIXED_TO_FLOAT(x, SCALE)))
-#define TAN(x) FX(tanf(_FIXED_TO_FLOAT(x, SCALE)))
-#define SQRT(x) FX(sqrtf(_FIXED_TO_FLOAT(x, SCALE)))
-
-#if RV_FIXED_POINT_EXTENSION
-// Accelerated
-inline fx32 fix_mul(fx32 a, fx32 b) {
-    int result;
-    // .insn r opcode6, func3, func7, rd, rs1, rs2
-    asm (".insn r 0x0b, 0, 0, %0, %1, %2" : "=r" (result) : "r" (a), "r" (b)); 
-    return result; 
-}
-#define MUL(x, y) fix_mul(x, y)
-#else
 #define MUL(x, y) _MUL(x, y, SCALE)
-#endif
 
 #else
 
@@ -65,11 +51,6 @@ typedef float fx32;
 #define FLT(x) (x)
 #define MUL(x, y) ((x) * (y))
 #define DIV(x, y) ((x) / (y))
-
-#define SIN(x) (sinf(x))
-#define COS(x) (cosf(x))
-#define TAN(x) (tanf(x))
-#define SQRT(x) (sqrtf(x))
 
 #endif
 
